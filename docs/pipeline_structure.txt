@@ -1,0 +1,41 @@
+RAW DATA
+   │
+   ▼
+DATA CLEANING
+   │
+   ▼
+STANDARDISED TRAP DATA
+   │
+   ▼
+SMOOTH FLIGHT CURVE
+   │
+   ▼
+CANDIDATE PEAKS
+   │
+   ▼
+PEAK QUALITY FILTER
+   │
+   ▼
+CANDIDATE GENERATION PAIRS
+   │
+   ▼
+TEMPERATURE ACCUMULATION
+   │
+   ▼
+THERMAL CONSISTENCY SCORE
+   │
+   ▼
+PARAMETER OPTIMISATION
+   │
+   ▼
+TRAIN / TEST VALIDATION
+   │
+   ▼
+FINAL ALGORITHM
+
+
+
+3–4 dienas → drīkst būt pilnīgi derīgi
+6–8 dienas → tipiskais dizains
+10–14 dienas → iespējams derīgi, bet mazāka temporālā izšķirtspēja
+ļoti lieli intervāli → pārbaudīt datu kļūdu
