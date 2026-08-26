@@ -1,0 +1,74 @@
+---
+title: "01_prepare_data"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+
+
+## Pakotnes
+
+```{r pakotnes}
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(lubridate)
+library(ggplot2)
+library(tidyverse)
+```
+
+
+## Import raw data
+
+```{r import}
+moth_raw <- read_excel( # cekulkodes
+  "data/raw/diamondback_count_21_25.xlsx"
+)
+
+meteo_raw <- read_excel( # laikapstakļi
+  "data/raw/Meteo 21-25.xlsx"
+)
+```
+
+
+Ieskāts datu struktūra:
+
+```{r ieskats_struktura}
+glimpse(moth_raw)
+glimpse(meteo_raw)
+
+names(moth_raw)
+names(meteo_raw)
+```
+
+
+
+## Data quality checks
+
+Convert datetime to plain Date. Oriģināli objekti netika aiztikti, tā vieta izveidotas īslaicīgas versijas kvalitātes parbāudei. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
