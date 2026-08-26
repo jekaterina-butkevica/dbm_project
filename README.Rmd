@@ -1,8 +1,7 @@
+# Diamondback moth modeli – Workflow
 
-Pipeline struktūra
+1.  `scripts/01_prepare_data.R` Imports raw moth and meteorological data.
 
+TO DOES:
 
-
-
-1. 
-
+- [ ] Data cleaning .R (+.word) to .md
