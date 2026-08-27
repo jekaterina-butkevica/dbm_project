@@ -1,14 +1,15 @@
 ---
 title: "01_prepare_data"
-output: html_document
+output: github_document
 date: "`r Sys.Date()`"
+
 ---
 
 
 
 ## Pakotnes
 
-```{r pakotnes}
+```{r pakotnes, message=FALSE, warning=FALSE}
 library(readxl)
 library(dplyr)
 library(tidyr)
@@ -18,10 +19,15 @@ library(ggplot2)
 library(tidyverse)
 ```
 
+## Direktorija
 
-## Import raw data
+Ir jāizmanto projekta sāknes direktoriju, nevis šī faila direktoriju!
+
+
+## 1. Import raw data
 
 ```{r import}
+setwd("../")
 moth_raw <- read_excel( # cekulkodes
   "data/raw/diamondback_count_21_25.xlsx"
 )
@@ -44,29 +50,181 @@ names(meteo_raw)
 
 
 
-## Data quality checks
+## 2. Data quality checks
 
 Convert datetime to plain Date. Oriģināli objekti netika aiztikti, tā vieta izveidotas īslaicīgas versijas kvalitātes parbāudei. 
 
+```{r QC_temp_f}
+moth_qc <- moth_raw %>% 
+  mutate(
+    Date = as.Date(Date)
+  )
+
+meteo_qc <- meteo_raw %>% 
+  mutate(
+    Date = as.Date(Date)
+  )
+```
+
+
+
+### 2.1. How many site-year series are present?
+
+```{r}
+moth_qc  %>% 
+  distinct(Year, Site, Year_plus_Site)  %>% 
+  arrange(Year, Site) 
+
+moth_qc %>% 
+  summarise(
+    n_series = n_distinct(Year_plus_Site),
+    n_sites = n_distinct(Site),
+    min_year = min(Year),
+    max_year = max(Year)
+  )
+
+```
+Datos ir pārstavēta 37 lamatu serija no 11 vietām. 
+
+
+
+
+
+### 2.2 Number of traps represented at each assessment date
+
+```{r}
+trap_check <- moth_qc  %>% 
+  count(
+    Year_plus_Site,
+    Year,
+    Site,
+    Date,
+    name = "n_traps"
+  )
+
+table(trap_check$n_traps)
+```
+Metožu aprakstā noradīts, ka katrā vietā bija izvietotas 5 lamatas, izņemot Jelgavu, kur tika izvietotas 3 lamatas. Lielāka daļa saskaitīto lamatu katrā serīha atbilst noradītajam daudzumam, taču pastāv gadījumi, kur skaits samazinājas vai ziteikti palielinājas (kopā 12 gadījumi).
+
+
+Apskatām gadījumus, kur lamatu skaits nav vienāds ar 5.
+```{r}
+trap_check %>% 
+  filter(n_traps != 5) %>% 
+  arrange(Year, Site, Date)
+```
+
+Aprakstā tika noradīts, ka Jelgava tika izvietotas tikai 3 lamatas. Apskatam vai Jelgavā vienmēr ir 3 lamatas.
+
+```{r vai_Jelgava_vienmer_3}
+trap_check %>% 
+  filter(Site == "Jelgava_city") %>% 
+  count(n_traps)
+```
+Jā, Jelagvā vienmēr ir 3 lamatas. Pārbaudam, vai ir serijas ārpus Jelgavas, kuros bija tikai tris lamatas:
+
+```{r}
+trap_check %>% 
+  filter(n_traps != 5) %>% 
+  arrange(Year, Site, Date) %>% 
+  filter(Site != "Jelgava_city") %>% 
+  count(n_traps)
+```
+
+Nē, šādu seriju nav. Kopā 12 serijas apsēkoto lamatu skaits atšķiras no noradītājā. Pārbaudam manuāli. 
+
+```{r}
+trap_check %>% 
+  filter(n_traps != 5)  %>% 
+  count(Site, n_traps)  %>% 
+  arrange(Site, n_traps) %>% 
+  filter(Site != "Jelgava_city")
+
+unusual_trap_dates <- trap_check |>
+  filter(!n_traps %in% c(3, 5)) |>
+  arrange(Year_plus_Site, Date)
+unusual_trap_dates
+```
+
+
+Apskāts: 
+
+- 2022Dricanu 25.08.2022 dati no 4 lamatam, bet nakamājā reizē - 09.01.2022 dati no 6 lamatam, vai var būt ievādes kļūda ???
+
+- 2023Dignajas 31.05.2023 ir dati no 10 lamatam, pēc tam tikai no 5. Ir vērtības 0 un 1, katra pārā skaita reižu - var būt datu dublēšana ???
+
+- 2023Elejas - 21.08.2023 dati no 6 lamatam, pirms tam un pēc tam ir pa 5 - ???
+
+- 2023Pures - sezonā beigas 5 reizes pēc kārtas apsēkotas tikai 4 lamatas, acimredzami vienkārši kāda iemesla dēļ samazinātais efforts. Nav kļūda.
+
+- 2023Tirzas - dati no divām lamatām no 08.06.2023, pirms tam un pēc tam dati ir no visām 5 lamatam - ???
+
+- 2025Varmes - vienreiz 4 lamatas, bet papildus viena lamata tājā pati datuma datēta ar 2022 gadu - datu ievādes kļūda.
 
 
 
 
 
 
+### 2.3 Date ranges by series
+
+```{r inervalu_skaits_parb}
+series_ranges <- moth_qc %>% 
+  group_by(Year_plus_Site, Year, Site)  %>% 
+  summarise(
+    first_date = min(Date),
+    last_date = max(Date),
+    n_assessments = n_distinct(Date),
+    .groups = "drop"
+  ) %>% 
+  arrange(Year, Site)
+summary(series_ranges)
+```
+Apskāts: 
+
+- 2022Kekavas ir divāini liels datu iegūšanas datumu skaits - 37. Apskatot, izskātas, ka datumu kļūdu nav, bet apsekošanas daļai sezonas notika rezi aptuvēni četras dienas.
 
 
+Parbaudu intervāļu gārumus:
+
+```{r intervalu_garums_parb}
+date_check <- trap_check %>% 
+  arrange(Year_plus_Site, Date) %>% 
+  group_by(Year_plus_Site) %>% 
+  mutate(
+    previous_date = lag(Date),
+    interval_days = as.numeric(Date - previous_date)
+  ) %>% 
+  ungroup()
+
+summary(date_check$interval_days)
+
+table(date_check$interval_days, useNA = "ifany")
+date_check %>% 
+  filter(
+    !is.na(interval_days),
+    interval_days > 14
+  ) %>% 
+  arrange(Year_plus_Site, Date)
+
+```
+ 
+ Apskāts: 
+ 
+ - 2021Ligatnes - ir viena sērija, kas datēta ar 2024 gadu. Datumu saskaņotību ar 2024. gadu neatradu. Iespējams tas ir 2021. gads, ievadīts ar kļūdu? Datumi to pieļauj.
+ - 2022Elejas - lidzīgi kā iepriekšēja punktā - viena serija no 2024. gada.
+ - 2024Dignajas - gārš intervāls. Vai nav izskrītusi viena serija?
+ - 2024Varmes - gārš intervāls. Vai nav izskrītusi viena serija?
+ - 2025Elejas - ir dati no 2027. gada, esmu pārliecināta, ka tas ir ievādes kļūda no 2025. gada.
+ - 2025Pures - gārš intervāls. Vai nav izskrītusi viena serija?
+ - 2025Varmes - 2022-07-16 - izskātas, ka ievades kļūda no 2025. gada; gārš intervāls starp 2025-06-18 un 2025-06-18. Vai nav izskrītusi viena serija?; Novērojumiem no 11.06.2025 izskatās, ka menesis un datums samainīti vietām - novēmbris nevar būt; dati no 2026. gada, visticamāk arī ir 2025.
+ 
+ 
+ 
+ 
 
 
-
-
-
-
-
-
-
-
-
+## 3. Create assessment-level QC table
 
 
 
