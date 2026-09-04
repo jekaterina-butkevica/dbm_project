@@ -20,8 +20,7 @@ library(tidyverse)
 ```
 
 ## Direktorija
-
-Ir jāizmanto projekta sāknes direktoriju, nevis šī faila direktoriju!
+???
 
 
 ## 1. Import raw data
@@ -68,7 +67,16 @@ meteo_qc <- meteo_raw %>%
 
 
 
-### 2.1. How many site-year series are present?
+
+
+
+
+
+
+
+### Vietas, lamatu skaiti
+
+#### 2.1. How many site-year series are present?
 
 ```{r}
 moth_qc  %>% 
@@ -89,8 +97,7 @@ Datos ir pārstavēta 37 lamatu serija no 11 vietām.
 
 
 
-
-### 2.2 Number of traps represented at each assessment date
+#### 2.2 Number of traps represented at one asssessment
 
 ```{r}
 trap_check <- moth_qc  %>% 
