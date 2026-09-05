@@ -39,5 +39,29 @@ TO DO:
 
 - [ ] Izveidot workflow kopsavilkumu ar skaidrojumiem
 - [ ] Izveidot workflow shēmu
-- [ ] Edītei par kļūdainiem novērojumiem
-- [ ] Projekta struktūra
+
+01_qc_and_corrections.R
+
+1.  Import raw moth data
+2.  Import raw meteo data
+3.  QC moth data
+4.  Confirmed moth corrections
+5.  QC moth data after corrections
+6.  QC meteo data
+7.  Confirmed meteo corrections, ja tādas būs vajadzīgas
+8.  QC meteo data after corrections
+9.  Save corrected datasets
+
+Dati: 01_qc_and_corrections.R ↓ moth_corrected.rds meteo_corrected.rds
+
+**no šī brīža modelēšanas pipeline strādā tikai ar pārbaudītiem
+datiem.**
+
+02_prepare_analysis_data.R
+
+Dati:
+
+Date pārbaudes datums previous_date iepriekšējās pārbaudes datums
+interval_days ekspozīcijas ilgums mid_date lasāms intervāla viduspunkts
+mid_time precīzs skaitlisks viduspunkts modelim n_traps lamatu skaits
+total_count kopējais kožu skaits trap_days sampling effort
