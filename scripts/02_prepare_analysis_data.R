@@ -206,12 +206,14 @@ meteo_analysis %>%
 
 
 
+
 # Save meteodata
 
 saveRDS(
   meteo_analysis,
   "data/processed/meteo_analysis.rds"
 )
+
 
 
 
