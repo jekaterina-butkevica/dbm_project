@@ -24,6 +24,9 @@ meteo_corrected <- readRDS(
 )
 
 
+
+# Kožu dati
+
 #Uz šo brīdi viena rinda ir viena lamata. Analīzei ir nepieciešams sassumēt
 # visu lamatu rezultātu katra uzskaites piegajienā.
 
@@ -144,3 +147,112 @@ saveRDS(
   moth_analysis,
   "data/processed/moth_analysis.rds"
 )
+
+
+
+# Meteo dati
+
+# 8. Prepare meteorological data -----------------------------
+
+
+
+meteo_analysis <- meteo_corrected %>%
+  select(
+    Year_plus_Site,
+    Year,
+    Site,
+    Date,
+    Taverage
+  ) %>%
+  arrange(
+    Year_plus_Site,
+    Date
+  )
+
+meteo_analysis <- meteo_analysis %>%
+  mutate(
+    day_of_year = yday(Date)
+  )
+
+
+meteo_analysis <- meteo_analysis %>%
+  mutate(
+    date_num = as.numeric(Date)
+  )
+
+# Šobrīd neatstāju DDabove0, jo tas nav gala mainīgais. Degree-days vēlāk rēķināsu pati no Taverage.
+
+glimpse(meteo_analysis)
+
+head(meteo_analysis, 20)
+
+meteo_analysis %>%
+  semi_join(
+    moth_assessment %>%
+      distinct(Year_plus_Site),
+    by = "Year_plus_Site"
+  ) %>%
+  filter(is.na(Taverage)) %>%
+  select(
+    Year_plus_Site,
+    Date,
+    Taverage
+  ) %>%
+  print(n = Inf)
+
+# Ir NA, bet tie ir arpus kožu perioda, joj izturēja pārbaudi uz vei tie ir starp noverojumu sakuma datumu unn beigu datumu
+
+
+
+
+
+# Save meteodata
+
+saveRDS(
+  meteo_analysis,
+  "data/processed/meteo_analysis.rds"
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
