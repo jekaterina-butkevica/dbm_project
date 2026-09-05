@@ -5,6 +5,7 @@ date: "`r Sys.Date()`"
 
 ---
 
+Šajā failā veicuveicu datu izpēti un ieviesu labojumus, pēc Edītes komentāru saņemšanas.
 
 
 ## Pakotnes
@@ -37,6 +38,7 @@ meteo_raw <- read_excel( # laikapstakļi
 ```
 
 
+
 Ieskāts datu struktūra:
 
 ```{r ieskats_struktura}
@@ -49,7 +51,7 @@ names(meteo_raw)
 
 
 
-## 2. Data quality checks
+## 2. Datuma pārvērsana
 
 Convert datetime to plain Date. Oriģināli objekti netika aiztikti, tā vieta izveidotas īslaicīgas versijas kvalitātes parbāudei. 
 
@@ -67,8 +69,18 @@ meteo_qc <- meteo_raw %>%
 
 
 
+## Izveidot korekcijas failus
+
+```{r korekcijas_faili}
+moth_corrected <- moth_qc
 
 
+```
+
+
+
+
+# Kožu dati 
 
 
 
@@ -172,6 +184,131 @@ Apskāts:
 
 
 
+**Pēc Edītes atbildes saņemšānas ievesu šadus labojumus: **
+
+# Manuālas palaišanas gadījumā, šo boku nedrikst palais vairākas reizes!
+
+
+2022Dricanu: viens no 09.01.2022 ierakstiem pārcelts uz 25.08.2022 ("visticamāk ievades kļūda, kopējot datumus pārceļam pirmo vērtību no 9.01.2022 uz 25.08.2022")
+
+```{r}
+moth_corrected %>%
+  filter(
+    Year_plus_Site == "2022Dricanu",
+    Date == as.Date("2022-09-01")
+  )
+
+moth_corrected <- moth_corrected %>%
+  group_by(Year_plus_Site, Date) %>%
+  mutate(
+    row_in_date = row_number()
+  ) %>%
+  ungroup() %>%
+  mutate(
+    Date = case_when(
+      Year_plus_Site == "2022Dricanu" &
+        Date == as.Date("2022-09-01") &
+        row_in_date == 1 ~ as.Date("2022-08-25"),
+
+      TRUE ~ Date
+    )
+  ) %>%
+  select(-row_in_date)
+```
+
+2023Dignajas 31.05.2023 ir ievadīts divas reizes pēc kārtas, atstāju tikai pusi no vertībām. ("jā 31.05.2023 ir ievadīts divas reizes pēc kārtas, reāli ir 1, 0, 1, 0, 0.")
+
+```{r}
+moth_corrected %>%
+  filter(
+    Year_plus_Site == "2023Dignajas",
+    Date == as.Date("2023-05-31")
+  )
+
+moth_corrected <- moth_corrected %>%
+  group_by(Year_plus_Site, Date) %>%
+  mutate(
+    row_in_date = row_number()
+  ) %>%
+  ungroup() %>%
+  filter(
+    !(
+      Year_plus_Site == "2023Dignajas" &
+      Date == as.Date("2023-05-31") &
+      row_in_date > 5
+    )
+  ) %>%
+  select(-row_in_date)
+```
+
+
+2023Elejas - 21.08.2023 paradās papildus lamata - nolēmts izņemt ierakstu ar 150 ("hmm, reāli nesaprotu, mazāk lamatu var būt ja kādu vējš aizpūš vai agrotehnika salauž, bet vairāk nevar būt... Bet izskatās ka tas ieraksts kur ir 150 tur neiederas, bet es reāli nevaru iedomāties, kā tas tur ir nokļuvis. Jebkurā gadījumā metam 150 ārā")
+
+
+```{r}
+moth_corrected %>%
+  filter(
+    Year_plus_Site == "2023Elejas",
+    Date == as.Date("2023-08-21")
+  )
+
+moth_corrected <- moth_corrected %>%
+  filter(
+    !(
+      Year_plus_Site == "2023Elejas" &
+      Date == as.Date("2023-08-21") &
+      Diamondback_count == 150
+    )
+  )
+
+```
+
+
+
+- 2023Pures - sezonā beigas 5 reizes pēc kārtas apsēkotas tikai 4 lamatas, acimredzami vienkārši kāda iemesla dēļ samazinātais efforts. Nav kļūda.
+
+
+
+
+- 2023Tirzas - dati no divām lamatām no 08.06.2023, pirms tam un pēc tam dati ir no visām 5 lamatam - ("visticamāk bojātas/ pazudušas lamatas") - labojumus neveikšu
+
+
+- 2025Varmes - vienreiz 4 lamatas 07.09.2025, bet papildus viena lamata tājā pati datuma datēta ar 2022 gadu - ("un 2022 tiešām ir datu ievades kļūda") - man tomēr liekas, ka tas ir pareizais ieraksts ar nepareizo gadu:
+
+```{r}
+moth_corrected %>%
+  filter(
+    Year_plus_Site == "2025Varmes",
+    Date %in% as.Date(c("2022-07-16", "2025-07-16"))
+  )
+
+moth_corrected <- moth_corrected %>%
+  mutate(
+    Date = case_when(
+      Year_plus_Site == "2025Varmes" &
+        Date == as.Date("2022-09-07") ~ as.Date("2025-09-07"),
+
+      TRUE ~ Date
+    )
+  )
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### 2.3 Date ranges by series
 
@@ -189,7 +326,12 @@ summary(series_ranges)
 ```
 Apskāts: 
 
-- 2022Kekavas ir divāini liels datu iegūšanas datumu skaits - 37. Apskatot, izskātas, ka datumu kļūdu nav, bet apsekošanas daļai sezonas notika rezi aptuvēni četras dienas.
+- 2022Kekavas ir divāini liels datu iegūšanas datumu skaits - 37. Apskatot, izskātas, ka datumu kļūdu nav, bet apsekošanas daļai sezonas notika rezi aptuvēni četras dienas. Edīte nokomentēja, ka tas ir pareizi - uzskaitēs vienkārši notika biežāk. Es neko nemetīšu ārā, jo pieejai tas netraucē. Tieši otrādi - biežakas uzskaites dod lielaku izškirtspēju.
+
+
+
+
+
 
 
 Parbaudu intervāļu gārumus:
@@ -228,11 +370,509 @@ date_check %>%
  
  
  
+**Pēc Edītes atbildes saņemšānas ievesu šadus labojumus: **
+
+ 
+ 2021Ligatnes - ("tas ir tā  ka tu saki, 2021. ievadīts ka 2024") - nomainu gadu
+ 
+```{r}
+moth_corrected %>%
+  filter(
+    Year_plus_Site == "2021Ligatnes",
+    Date %in% as.Date(c("2024-09-02", "2021-09-02"))
+  )
+
+ moth_corrected <- moth_corrected %>%
+  mutate(
+    Date = case_when(
+      Year_plus_Site == "2021Ligatnes" &
+        Date == as.Date("2024-09-02") ~ as.Date("2021-09-02"),
+
+      TRUE ~ Date
+    )
+  )
+ 
+```
+ 
+ 2022Elejas - tas pats, noaminu gada vērtību
+ 
+ 
+```{r}
+moth_corrected %>%
+  filter(
+    Year_plus_Site == "2022Elejas",
+    Date %in% as.Date(c("2024-05-11", "2022-05-11"))
+  )
+
+ moth_corrected <- moth_corrected %>%
+  mutate(
+    Date = case_when(
+      Year_plus_Site == "2022Elejas" &
+        Date == as.Date("2024-05-11") ~ as.Date("2022-05-11"),
+
+      TRUE ~ Date
+    )
+  )
+ 
+```
+
+ 
+ 
+ - 2024Dignajas - gārš intervāls. Vai nav izskrītusi viena serija? - uzskaite nenotika, labojumu nav
+ 
+ 
+ 
+ - 2024Varmes - gārš intervāls. Vai nav izskrītusi viena serija? - uzskaite nenotika, labojumu nav
+ 
+ 
+ - 2025Elejas - ir dati no 2027. gada, esmu pārliecināta, ka tas ir ievādes kļūda no 2025. gada - ("jā, tas būs 2025. gads") - laboju gadu
+ 
+  
+```{r}
+moth_corrected %>%
+  filter(
+    Year_plus_Site == "2025Elejas",
+    Date %in% as.Date(c("2027-07-02", "2025-07-02"))
+    )
+
+
+ moth_corrected <- moth_corrected %>%
+  mutate(
+    Date = case_when(
+      Year_plus_Site == "2025Elejas" &
+        Date == as.Date("2027-07-02") ~ as.Date("2025-07-02"),
+
+      TRUE ~ Date
+    )
+  )
+ 
+```
+
+
+
+
+
+ - 2025Pures - gārš intervāls. Vai nav izskrītusi viena serija? - labojummi nav nepieciešami
+ 
+ 
+ 
+ - 2025Varmes - 2022-07-16 - izskātas, ka ievades kļūda no 2025. gada;
+ 
+   
+```{r}
+moth_corrected %>%
+  filter(
+    Year_plus_Site == "2025Varmes",
+    Date %in% as.Date(c("2022-07-16", "2025-07-16"))
+    )
+
+
+ moth_corrected <- moth_corrected %>%
+  mutate(
+    Date = case_when(
+      Year_plus_Site == "2025Varmes" &
+        Date == as.Date("2022-07-16") ~ as.Date("2025-07-16"),
+
+      TRUE ~ Date
+    )
+  )
+ 
+```
+ 
  
 
+ 
+2025Varmes laboju 07.16.2022 uz 07.16.2025
+ 
+ 
+```{r}
+moth_corrected %>%
+  filter(
+    Year_plus_Site == "2025Varmes",
+    Date %in% as.Date(c("2027-07-16", "2025-07-16"))
+    )
 
-## 3. Create assessment-level QC table
 
+ moth_corrected <- moth_corrected %>%
+  mutate(
+    Date = case_when(
+      Year_plus_Site == "2025Varmes" &
+        Date == as.Date("2027-07-02") ~ as.Date("2025-07-02"),
+
+      TRUE ~ Date
+    )
+  )
+ 
+```
+ 
+ 
+   
+Gārš intervāls starp 2025-05-28 un 2025-06-18. Vai nav izskrītusi viena serija?; Novērojumiem no 11.06.2025 izskatās, ka menesis un datums samainīti vietām - novēmbris nevar būt; 
+
+```{r}
+moth_corrected %>%
+  filter(
+    Year_plus_Site == "2025Varmes",
+    Date %in% as.Date(c("2025-11-06", "2025-06-11"))
+    )
+
+
+ moth_corrected <- moth_corrected %>%
+  mutate(
+    Date = case_when(
+      Year_plus_Site == "2025Varmes" &
+        Date == as.Date("2025-11-06") ~ as.Date("2025-06-11"),
+
+      TRUE ~ Date
+    )
+  )
+ 
+```
+
+
+dati no 2026. gada, visticamāk arī ir 2025. - Jāizlaboi gadu un datumu
+
+
+
+```{r}
+moth_corrected %>%
+  filter(
+    Year_plus_Site == "2025Varmes",
+    Date %in% as.Date(c("2026-06-04", "2025-06-04"))
+    )
+
+
+ moth_corrected <- moth_corrected %>%
+  mutate(
+    Date = case_when(
+      Year_plus_Site == "2025Varmes" &
+        Date == as.Date("2026-06-04") ~ as.Date("2025-06-04"),
+
+      TRUE ~ Date
+    )
+  )
+ 
+```
+
+
+Tagad pārbaudu vai visur vieta un gads sakrīt ar ierakstu ViteGads:
+
+```{r}
+moth_corrected %>%
+  mutate(
+    year_from_id = as.numeric(substr(Year_plus_Site, 1, 4))
+  ) %>%
+  filter(
+    Year != year_from_id
+  )
+
+moth_corrected %>%
+  mutate(
+    site_from_id = substr(Year_plus_Site, 5, nchar(Year_plus_Site))
+  ) %>%
+  filter(
+    Site != site_from_id
+  )
+```
+Vai vērtība Year sakrīt ar gadu noradītu datumā:
+
+```{r}
+
+moth_corrected %>%
+  filter(
+    lubridate::year(Date) != Year
+  )
+```
+
+
+
+# temperatūras dati QC
+
+```{r}
+colSums(is.na(meteo_qc))
+```
+
+
+Pievienoju previous date un aprēķinu intervālu
+
+```{r}
+# izveido objektu
+meteo_date_check <- meteo_qc %>%
+  arrange(Year_plus_Site, Date) %>%
+  group_by(Year_plus_Site) %>%
+  mutate(
+    previous_date = lag(Date),
+    interval_days = as.numeric(Date - previous_date)
+  ) %>%
+  ungroup()
+```
+
+
+```{r}
+table(
+  meteo_date_check$interval_days,
+  useNA = "ifany"
+)
+```
+
+```{r}
+meteo_date_check %>%
+  filter(
+    !is.na(interval_days),
+    interval_days != 1
+  ) %>%
+  select(
+    Year_plus_Site,
+    Site,
+    Year,
+    previous_date,
+    Date,
+    interval_days
+  ) %>%
+  print(n = Inf)
+```
+
+
+```{r}
+summary(meteo_qc$Taverage)
+```
+
+
+```{r}
+meteo_qc %>%
+  filter(is.na(Taverage)) %>%
+  select(
+    Year_plus_Site,
+    Year,
+    Site,
+    Date,
+    Taverage,
+    DDabove0
+  ) %>%
+  print(n = Inf)
+```
+
+Ir peridoi ar trūkstošiem datiem.
+
+```{r}
+
+moth_ranges <- moth_corrected %>%
+  group_by(
+    Year_plus_Site,
+    Year,
+    Site
+  ) %>%
+  summarise(
+    moth_first_date = min(Date, na.rm = TRUE),
+    moth_last_date = max(Date, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+
+Tikai trūsktošas temperatūras:
+
+```{r}
+meteo_missing <- meteo_qc %>%
+  filter(
+    is.na(Taverage),
+    !is.na(Date)
+  )
+
+```
+
+Pievienojju kožu novērojumu periodus:
+
+```{r}
+meteo_missing_check <- meteo_missing %>%
+  left_join(
+    moth_ranges,
+    by = c(
+      "Year_plus_Site",
+      "Year",
+      "Site"
+    )
+  ) %>%
+  mutate(
+    during_moth_period =
+      Date >= moth_first_date &
+      Date <= moth_last_date
+  )
+```
+
+
+```{r}
+meteo_missing_check %>%
+  select(
+    Year_plus_Site,
+    Date,
+    moth_first_date,
+    moth_last_date,
+    during_moth_period
+  ) %>%
+  print(n = Inf)
+
+
+meteo_missing_check %>%
+  filter(during_moth_period == TRUE)
+```
+
+** Beigas ir tikai viena trukstošā diena, aks sakrīt ar kožu novērošans periodiem**.
+
+Apskatos kādi dati ir tajā periodā:
+
+```{r}
+meteo_qc %>%
+  filter(
+    Year_plus_Site == "2021Dignajas",
+    Date >= as.Date("2021-09-24"),
+    Date <= as.Date("2021-09-30")
+  ) %>%
+  select(
+    Date,
+    Taverage,
+    DDabove0
+  )
+
+
+```
+
+
+# Confirmed / justified meteorological corrections
+Blakus dienās bija ļoti lidzīga temperatūra. Labs gadījums lineārai interpolacijai.
+
+Pārreiķinu vidsdus DDabove0
+Un izņemu tukšo rindu:
+
+```{r temperatruas_interpolacija}
+
+meteo_corrected <- meteo_qc %>%
+  
+  # Remove completely empty row
+  filter(!is.na(Date)) %>%
+  
+  # Fill missing temperature for 2021 Dignajas
+  mutate(
+    Taverage = case_when(
+      Year_plus_Site == "2021Dignajas" &
+        Date == as.Date("2021-09-27") ~ 9.035,
+      
+      TRUE ~ Taverage
+    ),
+    
+    # Recalculate DDabove0 from corrected Taverage
+    DDabove0 = pmax(Taverage, 0)
+  )
+
+```
+
+
+
+
+
+
+
+Pēdeja parbaude:
+
+```{r}
+colSums(is.na(meteo_corrected))
+
+meteo_corrected %>%
+  filter(
+    is.na(Taverage)
+  ) %>%
+  left_join(
+    moth_ranges,
+    by = c(
+      "Year_plus_Site",
+      "Year",
+      "Site"
+    )
+  ) %>%
+  mutate(
+    during_moth_period =
+      Date >= moth_first_date &
+      Date <= moth_last_date
+  ) %>%
+  filter(during_moth_period == TRUE)
+
+```
+
+# 7. Final QC checks
+
+```{r}
+# Moth data: no missing critical identifiers
+colSums(is.na(
+  moth_corrected %>%
+    select(Year, Site, Year_plus_Site, Date, Diamondback_count)
+))
+
+# Meteo data: remaining missing temperatures
+colSums(is.na(meteo_corrected))
+```
+```{r}
+moth_corrected %>%
+  filter(year(Date) != Year)
+```
+```{r}
+meteo_corrected %>%
+  filter(is.na(Date))
+```
+
+```{r}
+moth_ranges <- moth_corrected %>%
+  group_by(
+    Year_plus_Site,
+    Year,
+    Site
+  ) %>%
+  summarise(
+    moth_first_date = min(Date, na.rm = TRUE),
+    moth_last_date = max(Date, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+meteo_corrected %>%
+  filter(is.na(Taverage)) %>%
+  left_join(
+    moth_ranges,
+    by = c(
+      "Year_plus_Site",
+      "Year",
+      "Site"
+    )
+  ) %>%
+  mutate(
+    during_moth_period =
+      Date >= moth_first_date &
+      Date <= moth_last_date
+  ) %>%
+  filter(during_moth_period == TRUE)
+```
+
+
+
+
+
+# Rezultātu faili 8. Save corrected datasets
+
+
+```{r save_files}
+
+saveRDS(
+  moth_corrected,
+  "../data/processed/moth_corrected.rds"
+)
+
+saveRDS(
+  meteo_corrected,
+  "../data/processed/meteo_corrected.rds"
+)
+
+
+
+
+```
 
 
 
