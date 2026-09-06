@@ -1,6 +1,6 @@
-# ============================================================
+
 # Detect candidate DBM flight peaks
-# ============================================================
+
 
 
 # Packages ----------------------------------------------------
@@ -74,9 +74,9 @@ ggplot(
 
 
 
-# ============================================================
+
 # Detect candidate peaks in all series
-# ============================================================
+
 
 all_candidate_peaks <- moth_analysis %>%
   group_by(Year_plus_Site) %>%
@@ -172,9 +172,9 @@ candidate_peaks_only %>%
   ) %>%
   print(n = Inf)
 
-# ============================================================
+
 # Candidate peak strength relative to each series
-# ============================================================
+
 
 candidate_peaks_only %>%
   filter(relative_prominence == 1) %>%
@@ -195,3 +195,91 @@ summary(candidate_peaks_only$relative_to_max)
 
 
 # Daudz nulles, tadēļ daudz kur mediāna sanāk nulle - nevar izmantot kā kvalitates kriteriju
+
+# peak_strength apvieno cik pīķiis lokāli izteikts un cik liels tas ir visas sezonas kontekstā
+summary(candidate_peaks_only$peak_strength)
+
+candidate_peaks_only %>%
+  arrange(peak_strength) %>%
+  select(
+    Year_plus_Site,
+    mid_date,
+    activity,
+    relative_prominence,
+    relative_to_max,
+    peak_strength
+  ) %>%
+  print(n = 30)
+
+
+
+# mālu problēma
+summary(candidate_peaks_only$edge_distance)
+candidate_peaks_only %>%
+  arrange(edge_distance) %>%
+  select(
+    Year_plus_Site,
+    mid_date,
+    activity,
+    peak_strength,
+    days_from_start,
+    days_to_end,
+    edge_distance
+  ) %>%
+  print(n = 30)
+
+table(candidate_peaks_only$observations_to_edge)
+
+
+candidate_peaks_only %>%
+  arrange(
+    observations_to_edge,
+    edge_distance
+  ) %>%
+  select(
+    Year_plus_Site,
+    mid_date,
+    activity,
+    peak_strength,
+    observations_before,
+    observations_after,
+    observations_to_edge,
+    edge_distance
+  ) %>%
+  print(n = 30)
+
+
+
+
+# Candidate peak summary table ------------------
+
+
+peak_summary <- candidate_peaks_only %>%
+  select(
+    Year_plus_Site,
+    Year,
+    Site,
+    mid_date,
+    activity,
+    relative_prominence,
+    relative_to_max,
+    peak_strength,
+    observations_before,
+    observations_after,
+    observations_to_edge,
+    edge_distance
+  ) %>%
+  arrange(
+    Year_plus_Site,
+    mid_date
+  )
+
+
+glimpse(peak_summary)
+head(peak_summary, 30)
+
+
+saveRDS(
+  peak_summary,
+  "data/processed/candidate_peaks.rds"
+)
