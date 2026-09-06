@@ -20,7 +20,7 @@ moth_analysis <- readRDS(
 # Load functions ----------------------------------------------
 
 source("R/smoothing_functions.R")
-<<<<<<< HEAD
+
 
 
 # Select one test series --------------------------------------
@@ -308,5 +308,4 @@ fit_loess_flight_curve(
 # Therefore candidate peaks will initially be detected from
 # observed standardized activity, while smoothed curves will
 # later be used to assess peak shape, prominence and stability.
-=======
->>>>>>> e72e7b70c2c5f8a8852adcb81c7d3d10d293e6e7
+
