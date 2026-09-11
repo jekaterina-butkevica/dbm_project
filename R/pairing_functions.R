@@ -29,7 +29,17 @@ generate_peak_pairs <- function(data) {
       peak_2_strength = data$peak_strength[peak_2],
       
       peak_1_edge = data$observations_to_edge[peak_1],
-      peak_2_edge = data$observations_to_edge[peak_2]
+      peak_2_edge = data$observations_to_edge[peak_2],
+      
+      pair_peak_strength = pmin(
+        peak_1_strength,
+        peak_2_strength
+      ),
+      
+      pair_edge_support = pmin(
+        peak_1_edge,
+        peak_2_edge
+      )
     )
   
   return(pairs)
