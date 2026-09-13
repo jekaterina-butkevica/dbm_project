@@ -67,6 +67,16 @@ generate_peak_pairs <- function(data) {
         peak_2_strength
       ),
       
+      pair_min_prominence = pmin(
+        peak_1_prominence,
+        peak_2_prominence
+      ),
+      
+      pair_min_relative_to_max = pmin(
+        peak_1_relative_to_max,
+        peak_2_relative_to_max
+      ),
+      
       pair_edge_support = pmin(
         peak_1_edge,
         peak_2_edge
