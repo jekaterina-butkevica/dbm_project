@@ -388,3 +388,125 @@ pair_series_summary
 
 
 nrow(pair_series_summary)
+
+
+
+# Give equal total weight to each Year_plus_Site series -----
+
+pair_candidates <- pair_candidates %>%
+  group_by(
+    Tbase,
+    Year_plus_Site
+  ) %>%
+  mutate(
+    n_pairs_in_series = n(),
+    
+    series_pair_weight =
+      1 / n_pairs_in_series
+  ) %>%
+  ungroup()
+
+
+pair_candidates %>%
+  filter(Tbase == 8) %>%
+  group_by(Year_plus_Site) %>%
+  summarise(
+    n_pairs = n(),
+    total_series_weight =
+      sum(series_pair_weight),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(n_pairs)) %>%
+  print(n = Inf)
+
+
+
+
+
+# Pair quality components ----------
+
+
+pair_candidates <- dd_grid %>%
+  mutate(
+    edge_score = pmin(
+      pair_edge_support / 5,
+      1
+    )
+  )
+
+
+pair_candidates <- pair_candidates %>%
+  mutate(
+    pair_quality_score = (
+      pair_min_prominence +
+        pair_min_relative_to_max +
+        edge_score
+    ) / 3
+  )
+
+
+pair_candidates %>%
+  filter(
+    Tbase == 8,
+    Year_plus_Site == "2021Dignajas"
+  ) %>%
+  select(
+    peak_1,
+    peak_2,
+    generation_days,
+    degree_days,
+    pair_min_prominence,
+    pair_min_relative_to_max,
+    pair_edge_support,
+    edge_score,
+    pair_quality_score
+  ) %>%
+  arrange(
+    desc(pair_quality_score)
+  )
+
+
+
+
+# Quality weights within each series -------------------
+
+
+pair_candidates <- pair_candidates %>%
+  group_by(
+    Tbase,
+    Year_plus_Site
+  ) %>%
+  mutate(
+    quality_pair_weight =
+      pair_quality_score /
+      sum(pair_quality_score)
+  ) %>%
+  ungroup()
+
+pair_candidates %>%
+  filter(Tbase == 8) %>%
+  group_by(Year_plus_Site) %>%
+  summarise(
+    n_pairs = n(),
+    total_quality_weight =
+      sum(quality_pair_weight),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(n_pairs)) %>%
+  print(n = Inf)
+
+
+pair_candidates %>%
+  filter(
+    Tbase == 8,
+    Year_plus_Site == "2021Dignajas"
+  ) %>%
+  select(
+    peak_1,
+    peak_2,
+    generation_days,
+    degree_days,
+    pair_quality_score,
+    quality_pair_weight
+  ) %>%
+  arrange(desc(quality_pair_weight))
