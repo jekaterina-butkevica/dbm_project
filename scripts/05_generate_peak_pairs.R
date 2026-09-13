@@ -95,6 +95,23 @@ candidate_generation_pairs %>%
   print(n = 40)
 
 
+
+candidate_generation_pairs %>%
+  filter(
+    Year_plus_Site == "2021Dignajas"
+  ) %>%
+  select(
+    peak_1,
+    peak_2,
+    generation_days,
+    peak_1_prominence,
+    peak_2_prominence,
+    peak_1_relative_to_max,
+    peak_2_relative_to_max,
+    pair_min_prominence,
+    pair_min_relative_to_max
+  )
+
 # ============================================================
 # Save candidate peak pairs
 # ============================================================
