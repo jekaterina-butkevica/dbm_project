@@ -335,3 +335,56 @@ quality_sensitivity <- lapply(
 
 
 quality_sensitivity
+
+
+
+
+# Candidate-pair dataset for selection ----------
+
+
+pair_candidates <- dd_grid %>%
+  select(
+    Year_plus_Site,
+    peak_1,
+    peak_2,
+    peak_1_date,
+    peak_2_date,
+    generation_days,
+    Tbase,
+    degree_days,
+    pair_peak_strength,
+    pair_edge_support
+  )
+
+nrow(pair_candidates)
+
+pair_candidates %>%
+  filter(Tbase == 8) %>%
+  count(
+    Year_plus_Site,
+    name = "n_pairs"
+  ) %>%
+  arrange(
+    desc(n_pairs)
+  ) %>%
+  print(n = Inf)
+
+
+pair_series_summary <- pair_candidates %>%
+  filter(Tbase == 8) %>%
+  group_by(Year_plus_Site) %>%
+  summarise(
+    n_pairs = n(),
+    max_pair_strength = max(pair_peak_strength),
+    median_pair_strength = median(pair_peak_strength),
+    max_edge_support = max(pair_edge_support),
+    .groups = "drop"
+  ) %>%
+  arrange(
+    desc(n_pairs)
+  )
+
+pair_series_summary
+
+
+nrow(pair_series_summary)
