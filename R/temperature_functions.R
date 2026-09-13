@@ -27,10 +27,22 @@ calculate_pair_degree_days <- function(
       )
     )
   
-  total_dd <- sum(
-    temp_data$daily_dd,
-    na.rm = TRUE
+  result <- tibble(
+    Tbase = Tbase,
+    
+    degree_days = sum(
+      temp_data$daily_dd,
+      na.rm = TRUE
+    ),
+    
+    n_temp_days = nrow(
+      temp_data
+    ),
+    
+    n_missing_temp = sum(
+      is.na(temp_data$Taverage)
+    )
   )
   
-  return(total_dd)
+  return(result)
 }
