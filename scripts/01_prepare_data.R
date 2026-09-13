@@ -1,5 +1,9 @@
 # Import and initial inspection of DBM and meteorological data
 
+# Šajā faila veicu datu parbaudi un datu labošanu pēc Edītes komentāru saņemšanas.
+
+
+
 # Pakotnes ---------------------------------------------------
 library(readxl)
 library(dplyr)
@@ -7,6 +11,7 @@ library(tidyr)
 library(stringr)
 library(lubridate)
 library(ggplot2)
+library(tidyverse)
 
 
 # 1. Import raw data -----------------------------------------
@@ -33,31 +38,34 @@ head(meteo_raw)
 
 
 
-# 3. Data quality checks -------------------------------------
+# 3. Datuma pārveršana -------------------------------------
 
 # Convert datetime to plain Date.
 # We keep the original raw objects unchanged and create
-# temporary QC versions.
+# temporary Quality Control versions.
 
-moth_qc <- moth_raw |>
+moth_qc <- moth_raw %>% 
   mutate(
     Date = as.Date(Date)
   )
 
-meteo_qc <- meteo_raw |>
+meteo_qc <- meteo_raw %>% 
   mutate(
     Date = as.Date(Date)
   )
 
 
 
+
+
+# Kožu dati ------
 # 3.1. How many site-year series are present? -----------------
 
-moth_qc |>
-  distinct(Year, Site, Year_plus_Site) |>
-  arrange(Year, Site)
+moth_qc  %>% 
+  distinct(Year, Site, Year_plus_Site)  %>% 
+  arrange(Year, Site) 
 
-moth_qc |>
+moth_qc %>% 
   summarise(
     n_series = n_distinct(Year_plus_Site),
     n_sites = n_distinct(Site),
@@ -68,7 +76,7 @@ moth_qc |>
 
 # 3.2. Number of traps represented at each assessment date ----
 
-trap_check <- moth_qc |>
+trap_check <- moth_qc  %>% 
   count(
     Year_plus_Site,
     Year,
@@ -81,21 +89,21 @@ table(trap_check$n_traps)
 
 
 # Show cases where number of trap observations is not 5
-trap_check |>
-  filter(n_traps != 5) |>
+trap_check %>% 
+  filter(n_traps != 5) %>% 
   arrange(Year, Site, Date)
 
 
 
 # 3.3. Calculate intervals between successive assessments ----
 
-date_check <- trap_check |>
-  arrange(Year_plus_Site, Date) |>
-  group_by(Year_plus_Site) |>
+date_check <- trap_check %>% 
+  arrange(Year_plus_Site, Date) %>% 
+  group_by(Year_plus_Site) %>% 
   mutate(
     previous_date = lag(Date),
     interval_days = as.numeric(Date - previous_date)
-  ) |>
+  ) %>% 
   ungroup()
 
 summary(date_check$interval_days)
@@ -104,12 +112,13 @@ table(date_check$interval_days, useNA = "ifany")
 
 
 # Show unusually short or long intervals
-date_check |>
+date_check %>% 
   filter(
     !is.na(interval_days),
     interval_days < 5 | interval_days > 9
-  ) |>
-  arrange(Year_plus_Site, Date)
+  ) %>% 
+  arrange(Year_plus_Site, Date
+          )
 
 
 
@@ -200,3 +209,8 @@ date_check |>
   ) |>
   arrange(Year_plus_Site, Date)
 
+
+
+
+
+# Temperatūras dati ------

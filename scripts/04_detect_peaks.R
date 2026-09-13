@@ -253,13 +253,13 @@ candidate_peaks_only %>%
 
 # Candidate peak summary table ------------------
 
-
 peak_summary <- candidate_peaks_only %>%
   select(
     Year_plus_Site,
     Year,
     Site,
     mid_date,
+    mid_time,
     activity,
     relative_prominence,
     relative_to_max,
@@ -271,9 +271,8 @@ peak_summary <- candidate_peaks_only %>%
   ) %>%
   arrange(
     Year_plus_Site,
-    mid_date
+    mid_time
   )
-
 
 glimpse(peak_summary)
 head(peak_summary, 30)
@@ -283,3 +282,4 @@ saveRDS(
   peak_summary,
   "data/processed/candidate_peaks.rds"
 )
+
