@@ -3,7 +3,7 @@
 
 
 library(dplyr)
-
+library(tidyr)
 
 # Load data ---------------------------------------------------
 
@@ -836,3 +836,412 @@ cv_tbase_summary <- cv_all_tbase %>%
     .groups = "drop"
   )
 cv_tbase_summary
+
+
+
+
+# ============================================================
+# Stability of selected peak pairs across Tbase scenarios
+# ============================================================
+
+pair_selection_stability <- cv_all_tbase %>%
+  mutate(
+    pair_id = paste(
+      peak_1,
+      peak_2,
+      sep = "-"
+    )
+  ) %>%
+  group_by(Year_plus_Site) %>%
+  summarise(
+    n_Tbase = n(),
+    
+    n_distinct_selected_pairs =
+      n_distinct(pair_id),
+    
+    modal_pair = names(
+      sort(
+        table(pair_id),
+        decreasing = TRUE
+      )
+    )[1],
+    
+    modal_pair_count = max(
+      table(pair_id)
+    ),
+    
+    modal_pair_fraction =
+      modal_pair_count / n_Tbase,
+    
+    .groups = "drop"
+  )
+
+
+
+pair_selection_stability %>%
+  arrange(
+    n_distinct_selected_pairs,
+    desc(modal_pair_fraction)
+  ) %>%
+  print(n = Inf)
+
+
+
+pair_selection_stability %>%
+  summarise(
+    n_series = n(),
+    
+    stable_all_Tbase =
+      sum(n_distinct_selected_pairs == 1),
+    
+    stable_at_least_10_of_13 =
+      sum(modal_pair_count >= 10),
+    
+    median_modal_fraction =
+      median(modal_pair_fraction),
+    
+    min_modal_fraction =
+      min(modal_pair_fraction),
+    
+    max_distinct_pairs =
+      max(n_distinct_selected_pairs)
+  )
+
+
+selection_wide <- cv_all_tbase %>%
+  mutate(
+    pair_id = paste(
+      peak_1,
+      peak_2,
+      sep = "-"
+    )
+  ) %>%
+  select(
+    Year_plus_Site,
+    Tbase,
+    pair_id
+  ) %>%
+  tidyr::pivot_wider(
+    names_from = Tbase,
+    values_from = pair_id,
+    names_prefix = "Tbase_"
+  )
+
+
+agreement_with_8 <- lapply(
+  0:12,
+  function(tb) {
+    
+    col_tb <- paste0(
+      "Tbase_",
+      tb
+    )
+    
+    tibble(
+      Tbase = tb,
+      
+      n_same_as_8 = sum(
+        selection_wide[[col_tb]] ==
+          selection_wide$Tbase_8
+      ),
+      
+      proportion_same_as_8 =
+        mean(
+          selection_wide[[col_tb]] ==
+            selection_wide$Tbase_8
+        )
+    )
+  }
+) %>%
+  bind_rows()
+agreement_with_8
+
+
+
+
+
+# ============================================================
+# Consensus pair across Tbase scenarios
+# ============================================================
+
+cv_consensus <- cv_all_tbase %>%
+  mutate(
+    pair_id = paste(
+      peak_1,
+      peak_2,
+      sep = "-"
+    )
+  ) %>%
+  group_by(
+    Year_plus_Site
+  ) %>%
+  mutate(
+    modal_pair = names(
+      sort(
+        table(pair_id),
+        decreasing = TRUE
+      )
+    )[1]
+  ) %>%
+  filter(
+    pair_id == modal_pair
+  ) %>%
+  summarise(
+    modal_pair = first(modal_pair),
+    
+    modal_pair_count = n(),
+    
+    modal_pair_fraction =
+      modal_pair_count / 13,
+    
+    median_error =
+      median(
+        thermal_relative_error
+      ),
+    
+    max_error =
+      max(
+        thermal_relative_error
+      ),
+    
+    median_generation_days =
+      median(
+        generation_days
+      ),
+    
+    median_pair_quality =
+      median(
+        pair_quality_score
+      ),
+    
+    .groups = "drop"
+  )
+
+
+
+cv_consensus %>%
+  arrange(
+    desc(median_error)
+  ) %>%
+  print(n = Inf)
+
+summary(
+  cv_consensus$median_error
+)
+
+
+# ============================================================
+# Training-derived reliability threshold
+# ============================================================
+
+error_q1 <- quantile(
+  cv_consensus$median_error,
+  0.25
+)
+
+error_q3 <- quantile(
+  cv_consensus$median_error,
+  0.75
+)
+
+error_iqr <-
+  error_q3 - error_q1
+
+error_upper_fence <-
+  error_q3 + 1.5 * error_iqr
+
+error_q1
+error_q3
+error_iqr
+error_upper_fence
+
+
+cv_consensus <- cv_consensus %>%
+  mutate(
+    reliable_pair =
+      median_error <= error_upper_fence
+  )
+
+
+cv_consensus %>%
+  select(
+    Year_plus_Site,
+    modal_pair,
+    modal_pair_fraction,
+    median_error,
+    median_pair_quality,
+    reliable_pair
+  ) %>%
+  arrange(
+    desc(median_error)
+  ) %>%
+  print(n = Inf)
+
+
+cv_consensus %>%
+  count(
+    reliable_pair
+  )
+
+
+# ============================================================
+# Training-derived stability threshold
+# ============================================================
+
+stability_q1 <- quantile(
+  cv_consensus$modal_pair_fraction,
+  0.25
+)
+
+stability_q3 <- quantile(
+  cv_consensus$modal_pair_fraction,
+  0.75
+)
+
+stability_iqr <-
+  stability_q3 - stability_q1
+
+stability_lower_fence <-
+  stability_q1 - 1.5 * stability_iqr
+
+
+
+stability_q1
+stability_q3
+stability_iqr
+stability_lower_fence
+
+
+cv_consensus <- cv_consensus %>%
+  mutate(
+    stable_pair =
+      modal_pair_fraction >= stability_lower_fence
+  )
+
+
+cv_consensus %>%
+  select(
+    Year_plus_Site,
+    modal_pair,
+    modal_pair_fraction,
+    median_error,
+    reliable_pair,
+    stable_pair
+  ) %>%
+  arrange(
+    modal_pair_fraction,
+    desc(median_error)
+  ) %>%
+  print(n = Inf)
+
+
+cv_consensus %>%
+  count(
+    reliable_pair,
+    stable_pair
+  )
+
+
+
+
+# ============================================================
+# Final training pair acceptance rule
+# ============================================================
+
+cv_consensus <- cv_consensus %>%
+  mutate(
+    accepted_pair =
+      reliable_pair &
+      stable_pair
+  )
+
+
+
+cv_consensus %>%
+  count(
+    accepted_pair
+  )
+
+
+accepted_generation_pairs_train <- train_pairs %>%
+  mutate(
+    pair_id = paste(
+      peak_1,
+      peak_2,
+      sep = "-"
+    )
+  ) %>%
+  inner_join(
+    cv_consensus %>%
+      filter(
+        accepted_pair
+      ) %>%
+      select(
+        Year_plus_Site,
+        modal_pair,
+        modal_pair_fraction,
+        median_error,
+        median_pair_quality
+      ),
+    by = "Year_plus_Site"
+  ) %>%
+  filter(
+    pair_id == modal_pair
+  )
+
+
+accepted_generation_pairs_train %>%
+  summarise(
+    n_pairs = n(),
+    n_series =
+      n_distinct(Year_plus_Site)
+  )
+
+
+
+accepted_generation_pairs_train %>%
+  select(
+    Year_plus_Site,
+    peak_1,
+    peak_2,
+    generation_days,
+    pair_quality_score,
+    modal_pair_fraction,
+    median_error
+  ) %>%
+  arrange(
+    Year_plus_Site
+  ) %>%
+  print(n = Inf)
+
+
+pair_selection_parameters <- list(
+  error_upper_fence =
+    as.numeric(error_upper_fence),
+  
+  stability_lower_fence =
+    as.numeric(stability_lower_fence),
+  
+  Tbase_values =
+    sort(
+      unique(pair_candidates_train$Tbase)
+    )
+)
+
+saveRDS(
+  pair_selection_parameters,
+  "data/processed/pair_selection_parameters.rds"
+)
+
+
+saveRDS(
+  accepted_generation_pairs_train,
+  "data/processed/accepted_generation_pairs_train.rds"
+)
+file.exists(
+  "data/processed/pair_selection_parameters.rds"
+)
+
+file.exists(
+  "data/processed/accepted_generation_pairs_train.rds"
+)
