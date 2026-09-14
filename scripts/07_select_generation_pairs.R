@@ -11,6 +11,14 @@ dd_grid <- readRDS(
   "data/processed/candidate_pairs_degree_days.rds"
 )
 
+meteo_analysis <- readRDS(
+  "data/processed/meteo_analysis.rds"
+)
+
+candidate_generation_pairs <- readRDS(
+  "data/processed/candidate_generation_pairs.rds"
+)
+
 
 # Start with one base temperature -----------------------------
 
@@ -73,351 +81,6 @@ pairs_tbase_8 %>%
 
 
 
-source("R/chain_functions.R")
-two_generation_chains_8 <-
-  generate_two_generation_chains(
-    pairs_tbase_8
-  )
-
-
-nrow(two_generation_chains_8)
-
-two_generation_chains_8 %>%
-  filter(
-    Year_plus_Site == "2021Dignajas"
-  ) %>%
-  select(
-    Year_plus_Site,
-    peak_1_a,
-    peak_2_a,
-    peak_2_b,
-    generation_days_a,
-    generation_days_b,
-    degree_days_a,
-    degree_days_b,
-    dd_difference,
-    relative_dd_difference,
-    chain_peak_strength,
-    chain_edge_support
-  )
-
-
-
-
-
-
-two_generation_chains_all <-
-  generate_two_generation_chains(
-    dd_grid
-  )
-nrow(two_generation_chains_all)
-table(two_generation_chains_all$Tbase)
-
-
-chain_summary_by_tbase <-
-  two_generation_chains_all %>%
-  group_by(Tbase) %>%
-  summarise(
-    n_chains = n(),
-    mean_relative_dd_difference =
-      mean(relative_dd_difference),
-    
-    median_relative_dd_difference =
-      median(relative_dd_difference),
-    
-    .groups = "drop"
-  )
-
-chain_summary_by_tbase
-
-
-
-
-
-
-# Inspect chain quality ------------
-
-
-chain_quality <- two_generation_chains_all %>%
-  filter(Tbase == 8) %>%
-  select(
-    Year_plus_Site,
-    peak_1_a,
-    peak_2_a,
-    peak_2_b,
-    chain_peak_strength,
-    chain_edge_support
-  ) %>%
-  arrange(
-    chain_peak_strength
-  )
-
-summary(chain_quality$chain_peak_strength)
-table(chain_quality$chain_edge_support)
-chain_quality %>%
-  print(n = 40)
-
-chain_quality %>%
-  summarise(
-    n_chains = n(),
-    n_series = n_distinct(Year_plus_Site)
-  )
-
-
-
-# Quality-weighted thermal consistency within each series --------
-
-series_tbase_summary <- two_generation_chains_all %>%
-  group_by(
-    Tbase,
-    Year_plus_Site
-  ) %>%
-  summarise(
-    n_chains = n(),
-    
-    # All compatible chains treated equally
-    mean_relative_dd_difference =
-      mean(relative_dd_difference),
-    
-    # Better-supported peak chains receive more weight
-    weighted_relative_dd_difference =
-      weighted.mean(
-        relative_dd_difference,
-        w = chain_peak_strength
-      ),
-    
-    .groups = "drop"
-  )
-
-
-series_tbase_summary
-
-
-tbase_series_summary <- series_tbase_summary %>%
-  group_by(Tbase) %>%
-  summarise(
-    n_series = n(),
-    
-    mean_series_difference =
-      mean(mean_relative_dd_difference),
-    
-    median_series_difference =
-      median(mean_relative_dd_difference),
-    
-    mean_weighted_series_difference =
-      mean(weighted_relative_dd_difference),
-    
-    median_weighted_series_difference =
-      median(weighted_relative_dd_difference),
-    
-    .groups = "drop"
-  )
-
-tbase_series_summary
-
-
-
-series_tbase_summary %>%
-  filter(Tbase == 8) %>%
-  arrange(
-    weighted_relative_dd_difference
-  ) %>%
-  print(n = Inf)
-
-
-
-
-
-# Leave-one-series-out sensitivity analysis ------------
-
-series_ids <- unique(
-  series_tbase_summary$Year_plus_Site
-)
-
-loo_results <- lapply(
-  series_ids,
-  function(series_to_remove) {
-    
-    temp <- series_tbase_summary %>%
-      filter(
-        Year_plus_Site != series_to_remove
-      ) %>%
-      group_by(Tbase) %>%
-      summarise(
-        mean_weighted_difference =
-          mean(weighted_relative_dd_difference),
-        .groups = "drop"
-      )
-    
-    best <- temp %>%
-      slice_min(
-        mean_weighted_difference,
-        n = 1,
-        with_ties = FALSE
-      )
-    
-    tibble(
-      removed_series = series_to_remove,
-      best_Tbase = best$Tbase,
-      best_difference = best$mean_weighted_difference
-    )
-  }
-) %>%
-  bind_rows()
-
-
-loo_results
-
-table(loo_results$best_Tbase)
-
-summary(loo_results$best_difference)
-
-
-
-
-
-# Sensitivity to chain quality thresholds ----------
-
-
-quality_thresholds <- c(
-  0,
-  0.001,
-  0.005,
-  0.01,
-  0.02,
-  0.05
-)
-
-quality_sensitivity <- lapply(
-  quality_thresholds,
-  function(threshold) {
-    
-    temp <- two_generation_chains_all %>%
-      filter(
-        chain_peak_strength >= threshold
-      ) %>%
-      group_by(
-        Tbase,
-        Year_plus_Site
-      ) %>%
-      summarise(
-        weighted_relative_dd_difference =
-          weighted.mean(
-            relative_dd_difference,
-            w = chain_peak_strength
-          ),
-        .groups = "drop"
-      ) %>%
-      group_by(Tbase) %>%
-      summarise(
-        n_series = n(),
-        mean_weighted_difference =
-          mean(weighted_relative_dd_difference),
-        .groups = "drop"
-      )
-    
-    best <- temp %>%
-      slice_min(
-        mean_weighted_difference,
-        n = 1,
-        with_ties = FALSE
-      )
-    
-    tibble(
-      threshold = threshold,
-      best_Tbase = best$Tbase,
-      best_difference = best$mean_weighted_difference,
-      n_series = best$n_series
-    )
-  }
-) %>%
-  bind_rows()
-
-
-quality_sensitivity
-
-
-
-
-# Candidate-pair dataset for selection ----------
-
-
-pair_candidates <- dd_grid %>%
-  select(
-    Year_plus_Site,
-    peak_1,
-    peak_2,
-    peak_1_date,
-    peak_2_date,
-    generation_days,
-    Tbase,
-    degree_days,
-    pair_peak_strength,
-    pair_edge_support
-  )
-
-nrow(pair_candidates)
-
-pair_candidates %>%
-  filter(Tbase == 8) %>%
-  count(
-    Year_plus_Site,
-    name = "n_pairs"
-  ) %>%
-  arrange(
-    desc(n_pairs)
-  ) %>%
-  print(n = Inf)
-
-
-pair_series_summary <- pair_candidates %>%
-  filter(Tbase == 8) %>%
-  group_by(Year_plus_Site) %>%
-  summarise(
-    n_pairs = n(),
-    max_pair_strength = max(pair_peak_strength),
-    median_pair_strength = median(pair_peak_strength),
-    max_edge_support = max(pair_edge_support),
-    .groups = "drop"
-  ) %>%
-  arrange(
-    desc(n_pairs)
-  )
-
-pair_series_summary
-
-
-nrow(pair_series_summary)
-
-
-
-# Give equal total weight to each Year_plus_Site series -----
-
-pair_candidates <- pair_candidates %>%
-  group_by(
-    Tbase,
-    Year_plus_Site
-  ) %>%
-  mutate(
-    n_pairs_in_series = n(),
-    
-    series_pair_weight =
-      1 / n_pairs_in_series
-  ) %>%
-  ungroup()
-
-
-pair_candidates %>%
-  filter(Tbase == 8) %>%
-  group_by(Year_plus_Site) %>%
-  summarise(
-    n_pairs = n(),
-    total_series_weight =
-      sum(series_pair_weight),
-    .groups = "drop"
-  ) %>%
-  arrange(desc(n_pairs)) %>%
-  print(n = Inf)
 
 
 
@@ -515,55 +178,6 @@ pair_candidates %>%
 
 
 
-# ============================================================
-# Common thermal signal across all series
-# ============================================================
-
-thermal_summary <- pair_candidates %>%
-  group_by(Tbase) %>%
-  summarise(
-    n_series = n_distinct(Year_plus_Site),
-    
-    weighted_mean_dd = weighted.mean(
-      degree_days,
-      w = quality_pair_weight
-    ),
-    
-    weighted_variance = weighted.mean(
-      (degree_days -
-         weighted.mean(
-           degree_days,
-           w = quality_pair_weight
-         ))^2,
-      w = quality_pair_weight
-    ),
-    
-    .groups = "drop"
-  ) %>%
-  mutate(
-    weighted_sd_dd =
-      sqrt(weighted_variance),
-    
-    weighted_cv_dd =
-      weighted_sd_dd /
-      weighted_mean_dd
-  )
-
-
-thermal_summary
-
-
-thermal_summary %>%
-  arrange(weighted_cv_dd)
-
-pair_candidates %>%
-  filter(Tbase == 8) %>%
-  summarise(
-    weighted_mean_dd = weighted.mean(
-      degree_days,
-      w = quality_pair_weight
-    )
-  )
 
 # ============================================================
 # Inspect degree-day distributions
@@ -650,13 +264,6 @@ temperature_identifiability <- candidate_intervals %>%
   ungroup()
 
 
-meteo_analysis <- readRDS(
-  "data/processed/meteo_analysis.rds"
-)
-
-candidate_generation_pairs <- readRDS(
-  "data/processed/candidate_generation_pairs.rds"
-)
 
 
 summary(
@@ -673,3 +280,392 @@ temperature_identifiability %>%
     below_10 = sum(min_temperature <= 10),
     below_12 = sum(min_temperature <= 12)
   )
+
+
+
+
+# Most informative intervals for Tbase ------------
+
+informative_intervals <- temperature_identifiability %>%
+  filter(
+    min_temperature <= 12
+  ) %>%
+  left_join(
+    candidate_generation_pairs %>%
+      select(
+        Year_plus_Site,
+        peak_1,
+        peak_2,
+        peak_1_date,
+        peak_2_date,
+        generation_days,
+        pair_min_prominence,
+        pair_min_relative_to_max,
+        pair_edge_support
+      ),
+    by = c(
+      "Year_plus_Site",
+      "peak_1_date",
+      "peak_2_date"
+    )
+  ) %>%
+  arrange(
+    min_temperature
+  )
+
+informative_intervals %>%
+  print(n = Inf)
+
+informative_intervals %>%
+  summarise(
+    n_intervals = n(),
+    n_series = n_distinct(Year_plus_Site)
+  )
+
+
+informative_intervals %>%
+  count(
+    Year_plus_Site,
+    name = "n_informative_intervals"
+  ) %>%
+  arrange(
+    desc(n_informative_intervals)
+  ) %>%
+  print(n = Inf)
+
+
+# Cold-temperature exposure within informative intervals -----
+
+temperature_exposure <- informative_intervals %>%
+  rowwise() %>%
+  mutate(
+    
+    n_days_total = {
+      temp <- meteo_analysis %>%
+        filter(
+          Year_plus_Site == .env$Year_plus_Site,
+          Date > .env$peak_1_date,
+          Date <= .env$peak_2_date
+        )
+      
+      nrow(temp)
+    },
+    
+    n_days_below_8 = {
+      temp <- meteo_analysis %>%
+        filter(
+          Year_plus_Site == .env$Year_plus_Site,
+          Date > .env$peak_1_date,
+          Date <= .env$peak_2_date
+        )
+      
+      sum(temp$Taverage <= 8, na.rm = TRUE)
+    },
+    
+    n_days_below_10 = {
+      temp <- meteo_analysis %>%
+        filter(
+          Year_plus_Site == .env$Year_plus_Site,
+          Date > .env$peak_1_date,
+          Date <= .env$peak_2_date
+        )
+      
+      sum(temp$Taverage <= 10, na.rm = TRUE)
+    },
+    
+    n_days_below_12 = {
+      temp <- meteo_analysis %>%
+        filter(
+          Year_plus_Site == .env$Year_plus_Site,
+          Date > .env$peak_1_date,
+          Date <= .env$peak_2_date
+        )
+      
+      sum(temp$Taverage <= 12, na.rm = TRUE)
+    }
+  ) %>%
+  ungroup()
+
+
+temperature_exposure %>%
+  select(
+    Year_plus_Site,
+    peak_1_date,
+    peak_2_date,
+    generation_days,
+    min_temperature,
+    n_days_total,
+    n_days_below_8,
+    n_days_below_10,
+    n_days_below_12,
+    pair_min_prominence,
+    pair_min_relative_to_max,
+    pair_edge_support
+  ) %>%
+  arrange(
+    min_temperature
+  ) %>%
+  print(n = Inf)
+
+
+
+temperature_exposure %>%
+  summarise(
+    intervals_with_days_below_8 =
+      sum(n_days_below_8 > 0),
+    
+    intervals_with_days_below_10 =
+      sum(n_days_below_10 > 0),
+    
+    intervals_with_days_below_12 =
+      sum(n_days_below_12 > 0),
+    
+    max_days_below_8 =
+      max(n_days_below_8),
+    
+    max_days_below_10 =
+      max(n_days_below_10),
+    
+    max_days_below_12 =
+      max(n_days_below_12)
+  )
+
+
+# Tbase = 0, 2, 4 un 6 °C mūsu datos būs ļoti grūti nošķirt pēc bioloģiskās reakcijas — lielākā daļa paaudzes notiek daudz siltākos apstākļos.
+
+
+# Degree-day distribution at Tbase = 8   ----
+
+pairs_8 <- pair_candidates %>%
+  filter(Tbase == 8)
+
+hist(
+  pairs_8$degree_days,
+  breaks = 15,
+  main = "Candidate generation degree-days, Tbase = 8",
+  xlab = "Degree-days"
+)
+
+
+
+
+dd_bins_8 <- pairs_8 %>%
+  mutate(
+    dd_group = cut(
+      degree_days,
+      breaks = seq(
+        100,
+        650,
+        by = 50
+      ),
+      include.lowest = TRUE
+    )
+  ) %>%
+  group_by(dd_group) %>%
+  summarise(
+    n_pairs = n(),
+    
+    total_quality_weight =
+      sum(quality_pair_weight),
+    
+    n_series =
+      n_distinct(Year_plus_Site),
+    
+    .groups = "drop"
+  )
+
+dd_bins_8
+
+
+
+
+# Relationship between calendar duration and degree-days -----
+
+pairs_8 %>%
+  select(
+    Year_plus_Site,
+    peak_1,
+    peak_2,
+    generation_days,
+    degree_days,
+    pair_quality_score,
+    quality_pair_weight
+  ) %>%
+  arrange(
+    generation_days,
+    degree_days
+  ) %>%
+  print(n = Inf)
+
+
+duration_summary_8 <- pairs_8 %>%
+  mutate(
+    duration_group = cut(
+      generation_days,
+      breaks = c(
+        18,
+        25,
+        32,
+        39,
+        51
+      ),
+      include.lowest = TRUE
+    )
+  ) %>%
+  group_by(duration_group) %>%
+  summarise(
+    n_pairs = n(),
+    n_series = n_distinct(Year_plus_Site),
+    
+    mean_days =
+      mean(generation_days),
+    
+    mean_dd =
+      mean(degree_days),
+    
+    median_dd =
+      median(degree_days),
+    
+    min_dd =
+      min(degree_days),
+    
+    max_dd =
+      max(degree_days),
+    
+    .groups = "drop"
+  )
+
+duration_summary_8
+
+
+cor(
+  pairs_8$generation_days,
+  pairs_8$degree_days
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Optimize thermal constant K for every Tbase ----------------
+
+K_grid <- seq(
+  100,
+  600,
+  by = 5
+)
+
+
+tbase_K_profile_relative <- lapply(
+  sort(unique(pair_candidates$Tbase)),
+  function(tb) {
+    
+    pairs_tb <- pair_candidates %>%
+      filter(Tbase == tb)
+    
+    K_results <- lapply(
+      K_grid,
+      function(K) {
+        
+        temp <- pairs_tb %>%
+          mutate(
+            
+            # One-generation interpretation
+            relative_error_1 =
+              abs(degree_days - K) / K,
+            
+            valid_1 =
+              generation_days >= 18 &
+              generation_days <= 50,
+            
+            # Two-generation interpretation
+            relative_error_2 =
+              abs(degree_days - 2 * K) / (2 * K),
+            
+            valid_2 =
+              generation_days / 2 >= 18 &
+              generation_days / 2 <= 50,
+            
+            constrained_error_1 = if_else(
+              valid_1,
+              relative_error_1,
+              Inf
+            ),
+            
+            constrained_error_2 = if_else(
+              valid_2,
+              relative_error_2,
+              Inf
+            ),
+            
+            best_relative_error = pmin(
+              constrained_error_1,
+              constrained_error_2
+            )
+          )
+        
+        tibble(
+          Tbase = tb,
+          K = K,
+          
+          weighted_relative_error = weighted.mean(
+            temp$best_relative_error,
+            w = temp$quality_pair_weight
+          )
+        )
+      }
+    ) %>%
+      bind_rows()
+    
+    K_results %>%
+      slice_min(
+        weighted_relative_error,
+        n = 1,
+        with_ties = FALSE
+      )
+  }
+) %>%
+  bind_rows()
+
+
+tbase_K_profile_relative
+
+
+tbase_K_profile_relative %>%
+  arrange(weighted_relative_error)
+
+tbase_K_profile_relative %>%
+  slice_min(
+    weighted_relative_error,
+    n = 1,
+    with_ties = FALSE
+  )
+
+
+tbase_K_profile_relative
+
+# Šie lauka dati nesatur pietiekami daudz tiešas informācijas, lai precīzi 
+# identificētu zemu fizioloģisko Tbase. Zemajā Tbase diapazonā Tbase un termiskā 
+# konstante K ir stipri savstarpēji kompensējami.
+
+
+
+#Tbase precīzi neidentificējams no šiem datiem
+
+
+
+
+
+
+
+
+
+
