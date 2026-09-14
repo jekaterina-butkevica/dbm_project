@@ -510,3 +510,166 @@ pair_candidates %>%
     quality_pair_weight
   ) %>%
   arrange(desc(quality_pair_weight))
+
+
+
+
+
+# ============================================================
+# Common thermal signal across all series
+# ============================================================
+
+thermal_summary <- pair_candidates %>%
+  group_by(Tbase) %>%
+  summarise(
+    n_series = n_distinct(Year_plus_Site),
+    
+    weighted_mean_dd = weighted.mean(
+      degree_days,
+      w = quality_pair_weight
+    ),
+    
+    weighted_variance = weighted.mean(
+      (degree_days -
+         weighted.mean(
+           degree_days,
+           w = quality_pair_weight
+         ))^2,
+      w = quality_pair_weight
+    ),
+    
+    .groups = "drop"
+  ) %>%
+  mutate(
+    weighted_sd_dd =
+      sqrt(weighted_variance),
+    
+    weighted_cv_dd =
+      weighted_sd_dd /
+      weighted_mean_dd
+  )
+
+
+thermal_summary
+
+
+thermal_summary %>%
+  arrange(weighted_cv_dd)
+
+pair_candidates %>%
+  filter(Tbase == 8) %>%
+  summarise(
+    weighted_mean_dd = weighted.mean(
+      degree_days,
+      w = quality_pair_weight
+    )
+  )
+
+# ============================================================
+# Inspect degree-day distributions
+# ============================================================
+
+dd_distribution_summary <- pair_candidates %>%
+  filter(
+    Tbase %in% c(0, 4, 8, 10)
+  ) %>%
+  group_by(Tbase) %>%
+  summarise(
+    q10 = quantile(
+      degree_days,
+      0.10
+    ),
+    
+    q25 = quantile(
+      degree_days,
+      0.25
+    ),
+    
+    median = median(
+      degree_days
+    ),
+    
+    q75 = quantile(
+      degree_days,
+      0.75
+    ),
+    
+    q90 = quantile(
+      degree_days,
+      0.90
+    ),
+    
+    .groups = "drop"
+  )
+
+dd_distribution_summary
+
+
+pair_candidates %>%
+  filter(Tbase == 8) %>%
+  select(
+    Year_plus_Site,
+    peak_1,
+    peak_2,
+    generation_days,
+    degree_days,
+    pair_quality_score,
+    quality_pair_weight
+  ) %>%
+  arrange(degree_days) %>%
+  print(n = Inf)
+
+
+
+# ============================================================
+# Can the data identify Tbase?
+# ============================================================
+
+candidate_intervals <- candidate_generation_pairs %>%
+  select(
+    Year_plus_Site,
+    peak_1_date,
+    peak_2_date
+  ) %>%
+  distinct()
+
+temperature_identifiability <- candidate_intervals %>%
+  rowwise() %>%
+  mutate(
+    min_temperature = min(
+      meteo_analysis %>%
+        filter(
+          Year_plus_Site == .env$Year_plus_Site,
+          Date > .env$peak_1_date,
+          Date <= .env$peak_2_date
+        ) %>%
+        pull(Taverage),
+      na.rm = TRUE
+    )
+  ) %>%
+  ungroup()
+
+
+meteo_analysis <- readRDS(
+  "data/processed/meteo_analysis.rds"
+)
+
+candidate_generation_pairs <- readRDS(
+  "data/processed/candidate_generation_pairs.rds"
+)
+
+
+summary(
+  temperature_identifiability$min_temperature
+)
+
+temperature_identifiability %>%
+  summarise(
+    below_0  = sum(min_temperature <= 0),
+    below_2  = sum(min_temperature <= 2),
+    below_4  = sum(min_temperature <= 4),
+    below_6  = sum(min_temperature <= 6),
+    below_8  = sum(min_temperature <= 8),
+    below_10 = sum(min_temperature <= 10),
+    below_12 = sum(min_temperature <= 12)
+  )

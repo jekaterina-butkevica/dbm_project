@@ -209,3 +209,17 @@ saveRDS(
   "data/processed/candidate_pairs_degree_days.rds"
 )
 
+
+dd_grid %>%
+  filter(
+    Tbase == 8,
+    Year_plus_Site == "2021Dignajas"
+  ) %>%
+  select(
+    peak_1,
+    peak_2,
+    generation_days,
+    degree_days,
+    pair_min_prominence,
+    pair_min_relative_to_max
+  )
