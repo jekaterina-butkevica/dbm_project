@@ -19,7 +19,9 @@ candidate_generation_pairs <- readRDS(
   "data/processed/candidate_generation_pairs.rds"
 )
 
-
+train_test_split <- readRDS(
+  "data/processed/train_test_split.rds"
+)
 # Start with one base temperature -----------------------------
 
 pairs_tbase_8 <- dd_grid %>%
@@ -131,6 +133,8 @@ pair_candidates %>%
 
 
 
+
+
 # Quality weights within each series -------------------
 
 
@@ -179,11 +183,98 @@ pair_candidates %>%
 
 
 
+
+
+train_series <- train_test_split %>%
+  filter(
+    split == "train"
+  ) %>%
+  pull(
+    Year_plus_Site
+  )
+
+
+
+
+
+pair_candidates_train <- pair_candidates %>%
+  filter(
+    Year_plus_Site %in% train_series
+  )
+
+
+
+
+
+pair_candidates_train %>%
+  summarise(
+    n_rows = n(),
+    n_unique_pairs = n_distinct(
+      paste(
+        Year_plus_Site,
+        peak_1,
+        peak_2
+      )
+    ),
+    n_series = n_distinct(Year_plus_Site),
+    n_Tbase = n_distinct(Tbase)
+  )
+
+
+pair_candidates_train
+
+
+
+
+
+
+train_pairs <- pair_candidates_train %>%
+  select(
+    Year_plus_Site,
+    peak_1,
+    peak_2,
+    peak_1_time,
+    peak_2_time,
+    peak_1_date,
+    peak_2_date,
+    generation_days,
+    pair_min_prominence,
+    pair_min_relative_to_max,
+    pair_edge_support,
+    edge_score,
+    pair_quality_score,
+    quality_pair_weight
+  ) %>%
+  distinct()
+
+
+train_pairs %>%
+  summarise(
+    n_pairs = n(),
+    n_series = n_distinct(Year_plus_Site)
+  )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#pair_candidates       = pilnie dati, tikai starpposma objekts
+#pair_candidates_train = DD analīze training datos
+#train_pairs           = 79 unikālie training kandidātpāri
+
 # ============================================================
 # Inspect degree-day distributions
 # ============================================================
-
-dd_distribution_summary <- pair_candidates %>%
+dd_distribution_summary <- pair_candidates_train %>%
   filter(
     Tbase %in% c(0, 4, 8, 10)
   ) %>%
