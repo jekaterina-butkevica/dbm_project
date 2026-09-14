@@ -152,7 +152,7 @@ candidate_pairs_dd_8 %>%
 # Calculate degree-days across a range of base temperatures
 # ============================================================
 
-Tbase_values <- 0:12
+Tbase_values <- -5:12
 
 
 dd_grid <- lapply(
@@ -223,3 +223,4 @@ dd_grid %>%
     pair_min_prominence,
     pair_min_relative_to_max
   )
+
