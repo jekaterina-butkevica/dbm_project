@@ -455,3 +455,50 @@ accepted_test_pairs %>%
 # Algoritms identificēja uzticamu paaudzes intervālu 3 no 6 neatkarīgajām test 
 #sērijām (50%). Šajās sērijās paaudzes ilguma modeļa MAE bija 3.26 dienas, 
 #RMSE 3.50 dienas un mediānā relatīvā kļūda 13.9%.
+
+
+
+saveRDS(
+  test_consensus,
+  "data/processed/test_pair_validation.rds"
+)
+
+saveRDS(
+  accepted_test_pairs,
+  "data/processed/accepted_generation_pairs_test.rds"
+)
+
+
+
+final_validation_summary <- tibble(
+  n_test_series =
+    n_distinct(test_consensus$Year_plus_Site),
+  
+  n_accepted_series =
+    sum(test_consensus$accepted_pair),
+  
+  acceptance_rate =
+    mean(test_consensus$accepted_pair),
+  
+  MAE_days =
+    mean(accepted_test_pairs$absolute_error_days),
+  
+  RMSE_days =
+    sqrt(
+      mean(accepted_test_pairs$error_days^2)
+    ),
+  
+  median_relative_error =
+    median(accepted_test_pairs$relative_error),
+  
+  mean_relative_error =
+    mean(accepted_test_pairs$relative_error)
+)
+
+final_validation_summary
+
+
+saveRDS(
+  final_validation_summary,
+  "data/processed/final_validation_summary.rds"
+)
