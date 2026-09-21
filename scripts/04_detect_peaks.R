@@ -45,7 +45,6 @@ peak_summary <- candidate_peaks_only %>%
     activity,
     relative_prominence,
     relative_to_max,
-    peak_strength,
     observations_before,
     observations_after,
     observations_to_edge,
