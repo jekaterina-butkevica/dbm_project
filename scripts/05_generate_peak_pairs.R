@@ -40,7 +40,7 @@ nrow(test_pairs)
 
 
 
-# Generate peak pairs for all series
+# Generate peak pairs for all series -------------------------------------------
 
 all_peak_pairs <- candidate_peaks %>%
   group_by(Year_plus_Site) %>%
@@ -68,9 +68,8 @@ all_peak_pairs %>%
 
 
 
-# ============================================================
-# Broad biological time window
-# ============================================================
+
+# Broad biological time window -------------------------------------------------
 
 candidate_generation_pairs <- all_peak_pairs %>%
   filter(
@@ -112,9 +111,9 @@ candidate_generation_pairs %>%
     pair_min_relative_to_max
   )
 
-# ============================================================
-# Save candidate peak pairs
-# ============================================================
+
+# Save candidate peak pairs ----------------------------------------------------
+
 
 saveRDS(
   all_peak_pairs,
