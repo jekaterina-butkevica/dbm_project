@@ -1,7 +1,5 @@
-# ============================================================
 # peak_functions.R
 # Functions for detecting candidate DBM flight peaks
-# ============================================================
 
 detect_candidate_peaks <- function(data) {
   

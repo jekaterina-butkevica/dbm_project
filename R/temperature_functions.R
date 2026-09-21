@@ -1,7 +1,5 @@
-# ============================================================
 # temperature_functions.R
 # Functions for degree-day calculations
-# ============================================================
 
 
 calculate_pair_degree_days <- function(
@@ -10,9 +8,15 @@ calculate_pair_degree_days <- function(
     Tbase
 ) {
   
-  series_id <- pair_row$Year_plus_Site
-  start_date <- pair_row$peak_1_date
-  end_date <- pair_row$peak_2_date
+  series_id <-
+    pair_row$Year_plus_Site
+  
+  start_date <-
+    pair_row$peak_1_date
+  
+  end_date <-
+    pair_row$peak_2_date
+  
   
   temp_data <- meteo_data %>%
     filter(
@@ -21,31 +25,38 @@ calculate_pair_degree_days <- function(
       Date <= end_date
     ) %>%
     mutate(
-      daily_dd = pmax(
-        Taverage - Tbase,
-        0
-      )
+      daily_dd =
+        pmax(
+          Taverage - Tbase,
+          0
+        )
     )
   
+  
   result <- tibble(
-    Tbase = Tbase,
     
-    degree_days = sum(
-      temp_data$daily_dd,
-      na.rm = TRUE
-    ),
+    Tbase =
+      Tbase,
     
-    n_temp_days = nrow(
-      temp_data
-    ),
+    degree_days =
+      sum(
+        temp_data$daily_dd,
+        na.rm = TRUE
+      ),
     
-    n_missing_temp = sum(
-      is.na(temp_data$Taverage)
-    )
+    n_temp_days =
+      nrow(
+        temp_data
+      ),
+    
+    n_missing_temp =
+      sum(
+        is.na(
+          temp_data$Taverage
+        )
+      )
   )
+  
   
   return(result)
 }
-
-
-
