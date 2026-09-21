@@ -58,6 +58,15 @@ dd_grid <- lapply(
   bind_rows()
 
 
+# Check for missing temperature data --------------------------
+
+if (any(dd_grid$n_missing_temp > 0)) {
+  stop(
+    "Degree-day calculation contains missing temperature data."
+  )
+}
+
+
 # Save --------------------------------------------------------
 
 saveRDS(
