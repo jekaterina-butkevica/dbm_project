@@ -2,14 +2,13 @@
 # Final validation on held-out test series
 
 
+# Packages ----------------------------------------------------
 
-# Pakotnes-----
 library(dplyr)
 
 
+# Load data ---------------------------------------------------
 
-
-# dati ----
 dd_grid <- readRDS(
   "data/processed/candidate_pairs_degree_days.rds"
 )
@@ -27,7 +26,7 @@ generation_model <- readRDS(
 )
 
 
-
+# Prepare candidate pairs ----------------------------------------------
 
 pair_candidates <- dd_grid %>%
   mutate(
@@ -54,20 +53,16 @@ pair_candidates <- dd_grid %>%
   ungroup()
 
 
-
-
-train_series <- train_test_split %>%
-  filter(split == "train") %>%
-  pull(Year_plus_Site)
+# Test series ------------------------------------------------------------
 
 test_series <- train_test_split %>%
-  filter(split == "test") %>%
-  pull(Year_plus_Site)
-
-pair_candidates_train <- pair_candidates %>%
   filter(
-    Year_plus_Site %in% train_series
+    split == "test"
+  ) %>%
+  pull(
+    Year_plus_Site
   )
+
 
 pair_candidates_test <- pair_candidates %>%
   filter(
@@ -75,136 +70,17 @@ pair_candidates_test <- pair_candidates %>%
   )
 
 
+# Training-derived K profile ----------------------------------------
 
-pair_candidates_test %>%
-  summarise(
-    n_rows = n(),
-    n_pairs = n_distinct(
-      paste(
-        Year_plus_Site,
-        peak_1,
-        peak_2
-      )
-    ),
-    n_series = n_distinct(Year_plus_Site),
-    n_Tbase = n_distinct(Tbase)
+training_K_profile <-
+  pair_selection_parameters$K_profile %>%
+  rename(
+    K_train = K
   )
 
 
-
-weighted_median <- function(x, w) {
-  
-  keep <- !is.na(x) &
-    !is.na(w) &
-    w > 0
-  
-  x <- x[keep]
-  w <- w[keep]
-  
-  ord <- order(x)
-  
-  x <- x[ord]
-  w <- w[ord]
-  
-  cumulative_weight <-
-    cumsum(w) / sum(w)
-  
-  x[
-    which(cumulative_weight >= 0.5)[1]
-  ]
-}
-
-
-
-
-
-
-
-estimate_K_iterative <- function(
-    data,
-    max_iter = 50,
-    tolerance = 0.01
-) {
-  
-  K_current <- weighted_median(
-    x = data$degree_days,
-    w = data$quality_pair_weight
-  )
-  
-  for (i in seq_len(max_iter)) {
-    
-    selected <- data %>%
-      mutate(
-        thermal_relative_error =
-          abs(degree_days - K_current) /
-          K_current
-      ) %>%
-      arrange(
-        Year_plus_Site,
-        thermal_relative_error,
-        desc(pair_quality_score)
-      ) %>%
-      group_by(Year_plus_Site) %>%
-      slice(1) %>%
-      ungroup()
-    
-    K_new <- median(
-      selected$degree_days
-    )
-    
-    if (
-      abs(K_new - K_current) <
-      tolerance
-    ) {
-      break
-    }
-    
-    K_current <- K_new
-  }
-  
-  list(
-    K = K_new,
-    selected_pairs = selected,
-    iterations = i
-  )
-}
-
-
-
-
-training_K_profile <- lapply(
-  pair_selection_parameters$Tbase_values,
-  function(tb) {
-    
-    training_tb <- pair_candidates_train %>%
-      filter(
-        Tbase == tb
-      )
-    
-    fit <- estimate_K_iterative(
-      training_tb
-    )
-    
-    tibble(
-      Tbase = tb,
-      K_train = fit$K
-    )
-  }
-) %>%
-  bind_rows()
-
-
-
-training_K_profile
-
-
-
-
-
-# ============================================================
-# Select best candidate pair in each test series
-# using training-derived K only
-# ============================================================
+# Select best candidate pair in each test series ------------------------
+# for each Tbase scenario
 
 test_selected_all_tbase <- pair_candidates_test %>%
   left_join(
@@ -232,15 +108,12 @@ test_selected_all_tbase <- pair_candidates_test %>%
   ungroup()
 
 
-
-test_selected_all_tbase %>%
-  summarise(
-    n_rows = n(),
-    n_series = n_distinct(Year_plus_Site),
-    n_Tbase = n_distinct(Tbase)
-  )
+n_tbase_scenarios <- n_distinct(
+  test_selected_all_tbase$Tbase
+)
 
 
+# Consensus pair across Tbase scenarios ------------------------------
 
 test_consensus <- test_selected_all_tbase %>%
   mutate(
@@ -265,37 +138,37 @@ test_consensus <- test_selected_all_tbase %>%
     pair_id == modal_pair
   ) %>%
   summarise(
-    modal_pair = first(modal_pair),
+    modal_pair = first(
+      modal_pair
+    ),
     
     modal_pair_count = n(),
     
     modal_pair_fraction =
-      modal_pair_count / 13,
+      modal_pair_count /
+      n_tbase_scenarios,
     
-    median_error =
-      median(
-        thermal_relative_error
-      ),
+    median_error = median(
+      thermal_relative_error
+    ),
     
-    max_error =
-      max(
-        thermal_relative_error
-      ),
+    max_error = max(
+      thermal_relative_error
+    ),
     
-    median_generation_days =
-      median(
-        generation_days
-      ),
+    median_generation_days = median(
+      generation_days
+    ),
     
-    median_pair_quality =
-      median(
-        pair_quality_score
-      ),
+    median_pair_quality = median(
+      pair_quality_score
+    ),
     
     .groups = "drop"
   )
 
 
+# Apply training-derived acceptance thresholds ---------------------------
 
 test_consensus <- test_consensus %>%
   mutate(
@@ -313,37 +186,7 @@ test_consensus <- test_consensus %>%
   )
 
 
-
-test_consensus %>%
-  select(
-    Year_plus_Site,
-    modal_pair,
-    modal_pair_fraction,
-    median_error,
-    median_pair_quality,
-    reliable_pair,
-    stable_pair,
-    accepted_pair
-  ) %>%
-  arrange(
-    Year_plus_Site
-  ) %>%
-  print(n = Inf)
-
-
-
-test_consensus %>%
-  count(
-    accepted_pair
-  )
-
-
-
-
-
-# ============================================================
-# Final prediction validation on accepted test pairs
-# ============================================================
+# Prediction validation on accepted test pairs ----------------------------
 
 accepted_test_pairs <- pair_candidates_test %>%
   mutate(
@@ -372,7 +215,8 @@ accepted_test_pairs <- pair_candidates_test %>%
   ) %>%
   mutate(
     mean_temperature =
-      degree_days / n_temp_days,
+      degree_days /
+      n_temp_days,
     
     observed_days =
       generation_days,
@@ -402,61 +246,50 @@ accepted_test_pairs <- pair_candidates_test %>%
   )
 
 
-accepted_test_pairs %>%
-  select(
-    Year_plus_Site,
-    peak_1,
-    peak_2,
-    observed_days,
-    mean_temperature,
-    predicted_days,
-    error_days,
-    absolute_error_days,
-    relative_error
-  ) %>%
-  arrange(
-    Year_plus_Site
-  ) %>%
-  print(n = Inf)
+# Validation summary ---------------------------------------------------
 
-
-
-
-
-accepted_test_pairs %>%
-  summarise(
-    n_test_pairs = n(),
-    
-    MAE_days =
+final_validation_summary <- tibble(
+  
+  n_test_series =
+    n_distinct(
+      test_consensus$Year_plus_Site
+    ),
+  
+  n_accepted_series =
+    sum(
+      test_consensus$accepted_pair
+    ),
+  
+  acceptance_rate =
+    mean(
+      test_consensus$accepted_pair
+    ),
+  
+  MAE_days =
+    mean(
+      accepted_test_pairs$absolute_error_days
+    ),
+  
+  RMSE_days =
+    sqrt(
       mean(
-        absolute_error_days
-      ),
-    
-    RMSE_days =
-      sqrt(
-        mean(
-          error_days^2
-        )
-      ),
-    
-    median_relative_error =
-      median(
-        relative_error
-      ),
-    
-    mean_relative_error =
-      mean(
-        relative_error
+        accepted_test_pairs$error_days^2
       )
-  )
+    ),
+  
+  median_relative_error =
+    median(
+      accepted_test_pairs$relative_error
+    ),
+  
+  mean_relative_error =
+    mean(
+      accepted_test_pairs$relative_error
+    )
+)
 
 
-
-# Algoritms identificēja uzticamu paaudzes intervālu 3 no 6 neatkarīgajām test 
-#sērijām (50%). Šajās sērijās paaudzes ilguma modeļa MAE bija 3.26 dienas, 
-#RMSE 3.50 dienas un mediānā relatīvā kļūda 13.9%.
-
-
+# Save -------------------------------------------------------
 
 saveRDS(
   test_consensus,
@@ -468,38 +301,32 @@ saveRDS(
   "data/processed/accepted_generation_pairs_test.rds"
 )
 
-
-
-final_validation_summary <- tibble(
-  n_test_series =
-    n_distinct(test_consensus$Year_plus_Site),
-  
-  n_accepted_series =
-    sum(test_consensus$accepted_pair),
-  
-  acceptance_rate =
-    mean(test_consensus$accepted_pair),
-  
-  MAE_days =
-    mean(accepted_test_pairs$absolute_error_days),
-  
-  RMSE_days =
-    sqrt(
-      mean(accepted_test_pairs$error_days^2)
-    ),
-  
-  median_relative_error =
-    median(accepted_test_pairs$relative_error),
-  
-  mean_relative_error =
-    mean(accepted_test_pairs$relative_error)
-)
-
-final_validation_summary
-
-
 saveRDS(
   final_validation_summary,
   "data/processed/final_validation_summary.rds"
 )
 
+
+if (file.exists(
+  "data/processed/test_pair_validation.rds"
+)) {
+  cat(
+    'Fails "data/processed/test_pair_validation.rds" ir izveidots.\n'
+  )
+}
+
+if (file.exists(
+  "data/processed/accepted_generation_pairs_test.rds"
+)) {
+  cat(
+    'Fails "data/processed/accepted_generation_pairs_test.rds" ir izveidots.\n'
+  )
+}
+
+if (file.exists(
+  "data/processed/final_validation_summary.rds"
+)) {
+  cat(
+    'Fails "data/processed/final_validation_summary.rds" ir izveidots.\n'
+  )
+}

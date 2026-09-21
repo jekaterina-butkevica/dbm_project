@@ -1,9 +1,11 @@
-# ============================================================
 # 11_refit_final_model.R
 # Refit final generation model after independent validation
-# ============================================================
+
+
+# Packages ----------------------------------------------------
 
 library(dplyr)
+
 
 # Load accepted intervals ------------------------------------
 
@@ -20,31 +22,22 @@ meteo_analysis <- readRDS(
 )
 
 
-# ============================================================
-# Combine accepted train and test intervals
-# ============================================================
+# Combine accepted train and test intervals ---------------------------------
 
 final_generation_pairs <- bind_rows(
   accepted_train %>%
-    mutate(dataset = "train"),
+    mutate(
+      dataset = "train"
+    ),
   
   accepted_test %>%
-    mutate(dataset = "test")
+    mutate(
+      dataset = "test"
+    )
 )
 
 
-final_generation_pairs %>%
-  count(dataset)
-
-final_generation_pairs %>%
-  summarise(
-    n_pairs = n(),
-    n_series = n_distinct(Year_plus_Site)
-  )
-
-
-
-
+# Prepare final model data --------------------------------------------
 
 final_model_data <- final_generation_pairs %>%
   rowwise() %>%
@@ -66,15 +59,12 @@ final_model_data <- final_generation_pairs %>%
   ungroup()
 
 
+# Fit final model ---------------------------------------------------
+
 final_generation_lm <- lm(
   development_rate ~ mean_temperature,
   data = final_model_data
 )
-
-summary(final_generation_lm)
-
-coef(final_generation_lm)
-
 
 
 final_intercept <-
@@ -89,99 +79,120 @@ final_Tbase <-
 final_K <-
   1 / final_slope
 
-final_Tbase
-final_K
 
-
-
-
-# ============================================================
-# Bootstrap uncertainty for final parameters
-# ============================================================
+# Bootstrap uncertainty for final parameters -----------------------------
 
 set.seed(2026)
 
 n_boot <- 2000
 
-boot_results <- vector(
-  "list",
-  n_boot
-)
-
-for (i in seq_len(n_boot)) {
-  
-  sampled_series <- sample(
-    final_model_data$Year_plus_Site,
-    size = nrow(final_model_data),
-    replace = TRUE
-  )
-  
-  boot_data <- final_model_data %>%
-    slice(
-      match(
-        sampled_series,
-        Year_plus_Site
-      )
-    )
-  
-  boot_model <- lm(
-    development_rate ~ mean_temperature,
-    data = boot_data
-  )
-  
-  boot_intercept <- coef(boot_model)[1]
-  boot_slope <- coef(boot_model)[2]
-  
-  boot_results[[i]] <- tibble(
-    Tbase = -boot_intercept / boot_slope,
-    K = 1 / boot_slope
-  )
-}
-
-boot_results <- bind_rows(
-  boot_results
+final_series <- unique(
+  final_model_data$Year_plus_Site
 )
 
 
-boot_results %>%
-  summarise(
-    Tbase_median = median(Tbase),
-    Tbase_lower = quantile(Tbase, 0.025),
-    Tbase_upper = quantile(Tbase, 0.975),
+boot_results <- lapply(
+  seq_len(n_boot),
+  function(i) {
     
-    K_median = median(K),
-    K_lower = quantile(K, 0.025),
-    K_upper = quantile(K, 0.975)
-  )
+    sampled_series <- sample(
+      final_series,
+      size = length(final_series),
+      replace = TRUE
+    )
+    
+    boot_data <- lapply(
+      sampled_series,
+      function(s) {
+        
+        final_model_data %>%
+          filter(
+            Year_plus_Site == s
+          )
+      }
+    ) %>%
+      bind_rows()
+    
+    boot_model <- lm(
+      development_rate ~ mean_temperature,
+      data = boot_data
+    )
+    
+    boot_intercept <-
+      coef(boot_model)[1]
+    
+    boot_slope <-
+      coef(boot_model)[2]
+    
+    tibble(
+      Tbase =
+        -boot_intercept / boot_slope,
+      
+      K =
+        1 / boot_slope
+    )
+  }
+) %>%
+  bind_rows()
 
 
-sum(
-  boot_results$K < 0
-)
 
-sum(
-  boot_results$Tbase < 0
-)
-
-
-# ============================================================
-# Save final model results
-# ============================================================
+# Final model parameters ---------------------------------------------
 
 final_model_parameters <- tibble(
-  Tbase = final_Tbase,
-  K = final_K,
-  R_squared = summary(final_generation_lm)$r.squared,
   
-  Tbase_boot_median = median(boot_results$Tbase),
-  Tbase_boot_lower = quantile(boot_results$Tbase, 0.025),
-  Tbase_boot_upper = quantile(boot_results$Tbase, 0.975),
+  intercept =
+    as.numeric(final_intercept),
   
-  K_boot_median = median(boot_results$K),
-  K_boot_lower = quantile(boot_results$K, 0.025),
-  K_boot_upper = quantile(boot_results$K, 0.975)
+  slope =
+    as.numeric(final_slope),
+  
+  Tbase =
+    as.numeric(final_Tbase),
+  
+  K =
+    as.numeric(final_K),
+  
+  R_squared =
+    summary(final_generation_lm)$r.squared,
+  
+  Tbase_boot_median =
+    median(
+      boot_results$Tbase
+    ),
+  
+  Tbase_boot_lower =
+    quantile(
+      boot_results$Tbase,
+      0.025
+    ),
+  
+  Tbase_boot_upper =
+    quantile(
+      boot_results$Tbase,
+      0.975
+    ),
+  
+  K_boot_median =
+    median(
+      boot_results$K
+    ),
+  
+  K_boot_lower =
+    quantile(
+      boot_results$K,
+      0.025
+    ),
+  
+  K_boot_upper =
+    quantile(
+      boot_results$K,
+      0.975
+    )
 )
 
+
+# Save ---------------------------------------------------------------------
 
 saveRDS(
   final_generation_pairs,
@@ -208,4 +219,43 @@ saveRDS(
   "data/processed/final_generation_model_bootstrap.rds"
 )
 
-final_model_parameters
+
+if (file.exists(
+  "data/processed/final_generation_pairs.rds"
+)) {
+  cat(
+    'Fails "data/processed/final_generation_pairs.rds" ir izveidots.\n'
+  )
+}
+
+if (file.exists(
+  "data/processed/final_generation_model_data.rds"
+)) {
+  cat(
+    'Fails "data/processed/final_generation_model_data.rds" ir izveidots.\n'
+  )
+}
+
+if (file.exists(
+  "data/processed/final_generation_model.rds"
+)) {
+  cat(
+    'Fails "data/processed/final_generation_model.rds" ir izveidots.\n'
+  )
+}
+
+if (file.exists(
+  "data/processed/final_generation_model_parameters.rds"
+)) {
+  cat(
+    'Fails "data/processed/final_generation_model_parameters.rds" ir izveidots.\n'
+  )
+}
+
+if (file.exists(
+  "data/processed/final_generation_model_bootstrap.rds"
+)) {
+  cat(
+    'Fails "data/processed/final_generation_model_bootstrap.rds" ir izveidots.\n'
+  )
+}
