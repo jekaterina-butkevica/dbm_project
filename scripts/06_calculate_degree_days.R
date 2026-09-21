@@ -1,5 +1,6 @@
 # 06_calculate_degree_days.R
-# Calculate degree-days between candidate peaks
+# Calculate degree-days across candidate Tbase values
+# for algorithm calibration and sensitivity analysis
 
 
 # Packages ----------------------------------------------------

@@ -1,7 +1,13 @@
 # 07_create_train_test_split.R
 # Create independent training and test series
 
+
+# Packages ----------------------------------------------------
+
 library(dplyr)
+
+
+# Load data ---------------------------------------------------
 
 candidate_generation_pairs <- readRDS(
   "data/processed/candidate_generation_pairs.rds"
@@ -11,7 +17,9 @@ moth_assessment <- readRDS(
   "data/processed/moth_assessment.rds"
 )
 
-# Metadata for each Year_plus_Site
+
+# Prepare series metadata ------------------------------------
+
 series_metadata <- moth_assessment %>%
   distinct(
     Year_plus_Site,
@@ -19,7 +27,9 @@ series_metadata <- moth_assessment %>%
     Site
   )
 
-# Keep only series that actually have candidate generation pairs
+
+# Keep only series with candidate generation pairs ------------
+
 series_split <- candidate_generation_pairs %>%
   distinct(
     Year_plus_Site
@@ -30,14 +40,7 @@ series_split <- candidate_generation_pairs %>%
   )
 
 
-
-series_split
-nrow(series_split)
-
-sum(is.na(series_split$Year))
-sum(is.na(series_split$Site))
-
-
+# Create reproducible train/test split ------------------------
 
 set.seed(2026)
 
@@ -73,29 +76,16 @@ series_split <- series_split %>%
   )
 
 
-
-
-series_split %>%
-  count(split)
-
-series_split %>%
-  count(
-    Year,
-    split
-  )
-
-
-series_split %>%
-  arrange(
-    split,
-    Year,
-    Site
-  ) %>%
-  print(n = Inf)
-
-
+# Save --------------------------------------------------------
 
 saveRDS(
   series_split,
   "data/processed/train_test_split.rds"
 )
+
+
+if (file.exists("data/processed/train_test_split.rds")) {
+  cat(
+    'Fails "data/processed/train_test_split.rds" ir izveidots.\n'
+  )
+}
