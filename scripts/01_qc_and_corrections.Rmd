@@ -7,6 +7,13 @@ date: "`r Sys.Date()`"
 
 Šajā failā veicuveicu datu izpēti un ieviesu labojumus, pēc Edītes komentāru saņemšanas.
 
+```{r setup, include=FALSE}
+knitr::opts_knit$set(
+  root.dir = normalizePath("..")
+)
+```
+
+
 
 ## Pakotnes
 
@@ -27,7 +34,6 @@ library(tidyverse)
 ## 1. Import raw data
 
 ```{r import}
-setwd("../")
 moth_raw <- read_excel( # cekulkodes
   "data/raw/diamondback_count_21_25.xlsx"
 )
@@ -861,15 +867,13 @@ meteo_corrected %>%
 
 saveRDS(
   moth_corrected,
-  "../data/processed/moth_corrected.rds"
+  "data/processed/moth_corrected.rds"
 )
 
 saveRDS(
   meteo_corrected,
-  "../data/processed/meteo_corrected.rds"
+  "data/processed/meteo_corrected.rds"
 )
-
-
 
 
 ```

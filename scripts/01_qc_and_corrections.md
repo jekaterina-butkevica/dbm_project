@@ -1,6 +1,6 @@
 01_prepare_data
 ================
-2026-09-05
+2026-09-21
 
 Šajā failā veicuveicu datu izpēti un ieviesu labojumus, pēc Edītes
 komentāru saņemšanas.
@@ -24,7 +24,6 @@ library(tidyverse)
 ## 1. Import raw data
 
 ``` r
-setwd("../")
 moth_raw <- read_excel( # cekulkodes
   "data/raw/diamondback_count_21_25.xlsx"
 )
@@ -1340,11 +1339,11 @@ meteo_corrected %>%
 ``` r
 saveRDS(
   moth_corrected,
-  "../data/processed/moth_corrected.rds"
+  "data/processed/moth_corrected.rds"
 )
 
 saveRDS(
   meteo_corrected,
-  "../data/processed/meteo_corrected.rds"
+  "data/processed/meteo_corrected.rds"
 )
 ```
