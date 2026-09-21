@@ -403,6 +403,126 @@ baseline_K
 
 
 
+
+
+
+# ============================================================
+# Leave-one-series-out stability of Tbase and K
+# ============================================================
+
+parameter_loocv <- lapply(
+  unique(generation_model_data$Year_plus_Site),
+  function(validation_series) {
+    
+    fold_train <- generation_model_data %>%
+      filter(
+        Year_plus_Site != validation_series
+      )
+    
+    fold_model <- lm(
+      development_rate ~ mean_temperature,
+      data = fold_train
+    )
+    
+    a <- coef(fold_model)[1]
+    b <- coef(fold_model)[2]
+    
+    tibble(
+      omitted_series = validation_series,
+      intercept = a,
+      slope = b,
+      Tbase = -a / b,
+      K = 1 / b
+    )
+  }
+) %>%
+  bind_rows()
+
+
+parameter_loocv %>%
+  summarise(
+    Tbase_min = min(Tbase),
+    Tbase_median = median(Tbase),
+    Tbase_max = max(Tbase),
+    
+    K_min = min(K),
+    K_median = median(K),
+    K_max = max(K)
+  )
+
+
+parameter_loocv %>%
+  arrange(Tbase) %>%
+  print(n = Inf)
+
+
+
+# ============================================================
+# Temperature range of accepted generation intervals
+# ============================================================
+
+generation_temperature_diagnostics <-
+  generation_model_data %>%
+  rowwise() %>%
+  mutate(
+    min_daily_temperature = min(
+      meteo_analysis %>%
+        filter(
+          Year_plus_Site == .env$Year_plus_Site,
+          Date > .env$peak_1_date,
+          Date <= .env$peak_2_date
+        ) %>%
+        pull(Taverage),
+      na.rm = TRUE
+    )
+  ) %>%
+  ungroup()
+
+
+generation_temperature_diagnostics %>%
+  summarise(
+    min_mean_temperature = min(mean_temperature),
+    median_mean_temperature = median(mean_temperature),
+    max_mean_temperature = max(mean_temperature),
+    
+    min_daily_temperature =
+      min(min_daily_temperature),
+    
+    n_below_6 =
+      sum(min_daily_temperature <= 6),
+    
+    n_below_8 =
+      sum(min_daily_temperature <= 8),
+    
+    n_below_10 =
+      sum(min_daily_temperature <= 10),
+    
+    n_below_12 =
+      sum(min_daily_temperature <= 12)
+  )
+
+
+
+generation_temperature_diagnostics %>%
+  select(
+    Year_plus_Site,
+    generation_days,
+    mean_temperature,
+    min_daily_temperature
+  ) %>%
+  arrange(min_daily_temperature) %>%
+  print(n = Inf)
+
+
+
+
+
+
+
+
+
+
+
 saveRDS(
   generation_lm,
   "data/processed/generation_model_train.rds"

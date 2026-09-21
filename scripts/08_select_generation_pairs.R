@@ -839,6 +839,43 @@ cv_tbase_summary
 
 
 
+cv_tbase_summary %>%
+  arrange(Tbase) %>%
+  print(n = Inf)
+
+
+
+best_tbase_by_series <- cv_all_tbase %>%
+  group_by(Year_plus_Site) %>%
+  arrange(
+    thermal_relative_error,
+    Tbase
+  ) %>%
+  slice(1) %>%
+  ungroup() %>%
+  select(
+    Year_plus_Site,
+    Tbase,
+    K_train,
+    thermal_relative_error,
+    generation_days,
+    degree_days
+  )
+
+best_tbase_by_series %>%
+  arrange(Tbase) %>%
+  print(n = Inf)
+
+best_tbase_by_series %>%
+  count(
+    Tbase,
+    sort = TRUE
+  )
+
+summary(
+  best_tbase_by_series$Tbase
+)
+
 
 # ============================================================
 # Stability of selected peak pairs across Tbase scenarios
