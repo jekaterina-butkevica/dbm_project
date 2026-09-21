@@ -89,8 +89,44 @@ K_est
 
 
 
+# Check whether the temperature-development relationship
+# shows evidence of curvature
+
+generation_lm_quadratic <- lm(
+  development_rate ~
+    mean_temperature +
+    I(mean_temperature^2),
+  data = generation_model_data
+)
+
+summary(generation_lm_quadratic)
+
+anova(
+  generation_lm,
+  generation_lm_quadratic
+)
+
+AIC(
+  generation_lm,
+  generation_lm_quadratic
+)
 
 
+plot(
+  generation_model_data$mean_temperature,
+  generation_model_data$development_rate,
+  xlab = "Mean temperature (°C)",
+  ylab = "Development rate (1/day)",
+  main = "Development rate vs temperature"
+)
+
+abline(
+  generation_lm,
+  lwd = 2
+)
+
+# Mūsu novērotajā temperatūru diapazonā un ar pašreizējiem datiem nav 
+# konstatējama nelinearitāte, kas attaisnotu sarežģītāku modeli.
 
 
 # Bootstrap uncertainty for Tbase and K ----
@@ -302,6 +338,68 @@ generation_model_parameters <- list(
     )
   )
 )
+
+
+# ============================================================
+# Sensitivity analysis: peak-only selected pairs
+# Same 22 series as in the main model
+# ============================================================
+
+main_model_series <-
+  accepted_generation_pairs_train %>%
+  pull(Year_plus_Site)
+
+
+baseline_sensitivity_data <-
+  pair_candidates_train %>%
+  filter(
+    Tbase == 0,
+    Year_plus_Site %in% main_model_series
+  ) %>%
+  semi_join(
+    baseline_selected_pairs,
+    by = c(
+      "Year_plus_Site",
+      "peak_1",
+      "peak_2"
+    )
+  ) %>%
+  mutate(
+    mean_temperature =
+      degree_days / n_temp_days,
+    
+    development_rate =
+      1 / generation_days
+  )
+
+
+baseline_sensitivity_lm <- lm(
+  development_rate ~ mean_temperature,
+  data = baseline_sensitivity_data
+)
+
+
+summary(
+  baseline_sensitivity_lm
+)
+
+
+baseline_intercept <-
+  coef(baseline_sensitivity_lm)[1]
+
+baseline_slope <-
+  coef(baseline_sensitivity_lm)[2]
+
+
+baseline_Tbase <-
+  -baseline_intercept / baseline_slope
+
+baseline_K <-
+  1 / baseline_slope
+
+
+baseline_Tbase
+baseline_K
 
 
 

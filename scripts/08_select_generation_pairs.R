@@ -1228,6 +1228,60 @@ pair_selection_parameters <- list(
     )
 )
 
+
+
+# ============================================================
+# Sensitivity: thermal vs peak-only pair selection
+# ============================================================
+
+selection_comparison <- accepted_generation_pairs_train %>%
+  select(
+    Year_plus_Site,
+    thermal_peak_1 = peak_1,
+    thermal_peak_2 = peak_2
+  ) %>%
+  inner_join(
+    baseline_selected_pairs %>%
+      select(
+        Year_plus_Site,
+        baseline_peak_1 = peak_1,
+        baseline_peak_2 = peak_2
+      ),
+    by = "Year_plus_Site"
+  ) %>%
+  mutate(
+    same_pair =
+      thermal_peak_1 == baseline_peak_1 &
+      thermal_peak_2 == baseline_peak_2
+  )
+
+
+selection_comparison %>%
+  count(
+    same_pair
+  )
+
+
+selection_comparison %>%
+  summarise(
+    n_series = n(),
+    n_same = sum(same_pair),
+    proportion_same = mean(same_pair)
+  )
+
+
+selection_comparison %>%
+  filter(
+    !same_pair
+  ) %>%
+  arrange(
+    Year_plus_Site
+  ) %>%
+  print(n = Inf)
+
+
+
+
 saveRDS(
   pair_selection_parameters,
   "data/processed/pair_selection_parameters.rds"
