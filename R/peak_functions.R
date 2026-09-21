@@ -37,21 +37,11 @@ detect_candidate_peaks <- function(data) {
         local_prominence / activity,
       
       # Series-level activity context
-      series_median_activity =
-        median(activity, na.rm = TRUE),
-      
       series_max_activity =
         max(activity, na.rm = TRUE),
       
-      # Peak strength relative to the whole series
-      relative_to_median =
-        activity / series_median_activity,
-      
       relative_to_max =
         activity / series_max_activity,
-      
-      peak_strength =
-        relative_prominence * relative_to_max,
       
       # Position within the observed series
       series_start_time =
@@ -91,5 +81,6 @@ detect_candidate_peaks <- function(data) {
           observations_after
         )
     )
+  
   return(result)
 }
