@@ -26,34 +26,25 @@ generation_model <- readRDS(
 )
 
 
-# Prepare candidate pairs ----------------------------------------------
+# Load functions ----------------------------------------------
 
-pair_candidates <- dd_grid %>%
-  mutate(
-    edge_score = pmin(
-      pair_edge_support / 5,
-      1
-    ),
-    
-    pair_quality_score = (
-      pair_min_prominence +
-        pair_min_relative_to_max +
-        edge_score
-    ) / 3
-  ) %>%
-  group_by(
-    Tbase,
-    Year_plus_Site
-  ) %>%
-  mutate(
-    quality_pair_weight =
-      pair_quality_score /
-      sum(pair_quality_score)
-  ) %>%
-  ungroup()
+source(
+  "R/pair_selection_functions.R"
+)
 
 
-# Test series ------------------------------------------------------------
+
+# Prepare candidate pairs -----------------------------------
+
+
+pair_candidates <- add_pair_quality(
+  dd_grid
+)
+
+
+
+# Test series ----------------------------------------------
+
 
 test_series <- train_test_split %>%
   filter(
@@ -70,123 +61,48 @@ pair_candidates_test <- pair_candidates %>%
   )
 
 
-# Training-derived K profile ----------------------------------------
 
-training_K_profile <-
-  pair_selection_parameters$K_profile %>%
-  rename(
-    K_train = K
-  )
+# Select best pair for each Tbase ---------------------------
+# using training-derived K profile
 
 
-# Select best candidate pair in each test series ------------------------
-# for each Tbase scenario
-
-test_selected_all_tbase <- pair_candidates_test %>%
-  left_join(
-    training_K_profile,
-    by = "Tbase"
-  ) %>%
-  mutate(
-    thermal_relative_error =
-      abs(degree_days - K_train) /
-      K_train
-  ) %>%
-  arrange(
-    Tbase,
-    Year_plus_Site,
-    thermal_relative_error,
-    desc(pair_quality_score),
-    peak_1,
-    peak_2
-  ) %>%
-  group_by(
-    Tbase,
-    Year_plus_Site
-  ) %>%
-  slice(1) %>%
-  ungroup()
-
-
-n_tbase_scenarios <- n_distinct(
-  test_selected_all_tbase$Tbase
+test_selected_all_tbase <- select_pairs_from_K_profile(
+  pair_candidates =
+    pair_candidates_test,
+  
+  K_profile =
+    pair_selection_parameters$K_profile
 )
 
 
-# Consensus pair across Tbase scenarios ------------------------------
 
-test_consensus <- test_selected_all_tbase %>%
-  mutate(
-    pair_id = paste(
-      peak_1,
-      peak_2,
-      sep = "-"
-    )
-  ) %>%
-  group_by(
-    Year_plus_Site
-  ) %>%
-  mutate(
-    modal_pair = names(
-      sort(
-        table(pair_id),
-        decreasing = TRUE
-      )
-    )[1]
-  ) %>%
-  filter(
-    pair_id == modal_pair
-  ) %>%
-  summarise(
-    modal_pair = first(
-      modal_pair
-    ),
-    
-    modal_pair_count = n(),
-    
-    modal_pair_fraction =
-      modal_pair_count /
-      n_tbase_scenarios,
-    
-    median_error = median(
-      thermal_relative_error
-    ),
-    
-    max_error = max(
-      thermal_relative_error
-    ),
-    
-    median_generation_days = median(
-      generation_days
-    ),
-    
-    median_pair_quality = median(
-      pair_quality_score
-    ),
-    
-    .groups = "drop"
-  )
+# Consensus pair across Tbase scenarios ----------------------
 
 
-# Apply training-derived acceptance thresholds ---------------------------
-
-test_consensus <- test_consensus %>%
-  mutate(
-    reliable_pair =
-      median_error <=
-      pair_selection_parameters$error_upper_fence,
-    
-    stable_pair =
-      modal_pair_fraction >=
-      pair_selection_parameters$stability_lower_fence,
-    
-    accepted_pair =
-      reliable_pair &
-      stable_pair
-  )
+test_consensus <- summarise_pair_consensus(
+  test_selected_all_tbase
+)
 
 
-# Prediction validation on accepted test pairs ----------------------------
+
+# Apply training-derived acceptance thresholds ---------------
+
+
+test_consensus <- apply_pair_acceptance(
+  consensus =
+    test_consensus,
+  
+  error_upper_fence =
+    pair_selection_parameters$error_upper_fence,
+  
+  stability_lower_fence =
+    pair_selection_parameters$stability_lower_fence
+)
+
+
+
+# Prediction validation on accepted test pairs ---------------
+
 
 accepted_test_pairs <- pair_candidates_test %>%
   mutate(
@@ -238,7 +154,9 @@ accepted_test_pairs <- pair_candidates_test %>%
       observed_days,
     
     absolute_error_days =
-      abs(error_days),
+      abs(
+        error_days
+      ),
     
     relative_error =
       absolute_error_days /
@@ -246,7 +164,9 @@ accepted_test_pairs <- pair_candidates_test %>%
   )
 
 
-# Validation summary ---------------------------------------------------
+
+# Validation summary -----------------------------------------
+
 
 final_validation_summary <- tibble(
   
@@ -289,7 +209,9 @@ final_validation_summary <- tibble(
 )
 
 
+
 # Save -------------------------------------------------------
+
 
 saveRDS(
   test_consensus,
