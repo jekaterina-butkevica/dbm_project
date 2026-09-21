@@ -1,19 +1,14 @@
-# ============================================================
 # 02_prepare_analysis_data.R
 # Prepare assessment-level moth data for modelling
-# ============================================================
-
-# Šajā failā no koriģētajiem datiem tiek izveidotas analīzei gatava kožu (assessment-level) tabula
 
 
 
-# Pakotnes ----
+# Packages ----------------------------------------------------
 
 library(dplyr)
-library(lubridate)
 
 
-# 1. Load corrected data -------------------------------------
+# Load corrected data -----------------------------------------
 
 moth_corrected <- readRDS(
   "data/processed/moth_corrected.rds"
@@ -25,12 +20,11 @@ meteo_corrected <- readRDS(
 
 
 
-# Kožu dati
+# Prepare moth assessment data -------------------------------
 
-#Uz šo brīdi viena rinda ir viena lamata. Analīzei ir nepieciešams sassumēt
-# visu lamatu rezultātu katra uzskaites piegajienā.
 
-# 2. Aggregate trap catches by assessment date ---------------
+# One raw row = one trap at one assessment.
+# Aggregate all traps within the same site-year and date.
 
 moth_assessment <- moth_corrected %>%
   group_by(
@@ -41,7 +35,10 @@ moth_assessment <- moth_corrected %>%
   ) %>%
   summarise(
     n_traps = n(),
-    total_count = sum(Diamondback_count, na.rm = TRUE),
+    total_count = sum(
+      Diamondback_count,
+      na.rm = TRUE
+    ),
     .groups = "drop"
   ) %>%
   arrange(
@@ -49,83 +46,54 @@ moth_assessment <- moth_corrected %>%
     Date
   )
 
-glimpse(moth_assessment)
-head(moth_assessment, 20)
 
-
-
-# 3. Calculate intervals between assessments -----------------
+# Calculate intervals between assessments --------------------
 
 moth_assessment <- moth_assessment %>%
-  group_by(Year_plus_Site) %>%
-  arrange(Date, .by_group = TRUE) %>%
+  group_by(
+    Year_plus_Site
+  ) %>%
+  arrange(
+    Date,
+    .by_group = TRUE
+  ) %>%
   mutate(
-    previous_date = lag(Date),
-    interval_days = as.numeric(Date - previous_date)
+    previous_date =
+      lag(Date),
+    
+    interval_days =
+      as.numeric(
+        Date - previous_date
+      )
   ) %>%
   ungroup()
 
 
-
-summary(moth_assessment$interval_days)
-
-table(
-  moth_assessment$interval_days,
-  useNA = "ifany"
-)
-
-moth_assessment %>%
-  filter(
-    !is.na(interval_days),
-    interval_days > 14
-  ) %>%
-  select(
-    Year_plus_Site,
-    Date,
-    previous_date,
-    interval_days,
-    n_traps,
-    total_count
-  ) %>%
-  print(n = Inf)
-
-
-
-# 4. Calculate interval midpoint ------------------------------
+# Calculate interval midpoint --------------------------------
 
 moth_assessment <- moth_assessment %>%
   mutate(
-    mid_date = previous_date + interval_days / 2,
-    mid_time = as.numeric(previous_date) + interval_days / 2
+    mid_date =
+      previous_date +
+      interval_days / 2,
+    
+    mid_time =
+      as.numeric(previous_date) +
+      interval_days / 2
   )
 
 
-# 5. Calculate sampling effort -------------------------------
+# Calculate sampling effort ----------------------------------
 
 moth_assessment <- moth_assessment %>%
   mutate(
-    trap_days = n_traps * interval_days
+    trap_days =
+      n_traps *
+      interval_days
   )
 
 
-
-moth_assessment %>%
-  select(
-    Year_plus_Site,
-    Date,
-    previous_date,
-    mid_date,
-    mid_time,
-    interval_days,
-    n_traps,
-    total_count,
-    trap_days
-  ) %>%
-  head(25)
-
-
-
-# 6. Create modelling dataset --------------------------------
+# Create analysis dataset ------------------------------------
 
 moth_analysis <- moth_assessment %>%
   filter(
@@ -134,9 +102,8 @@ moth_analysis <- moth_assessment %>%
     !is.na(trap_days)
   )
 
-nrow(moth_assessment)
-nrow(moth_analysis)
 
+# Save moth data ---------------------------------------------
 
 saveRDS(
   moth_assessment,
@@ -150,10 +117,7 @@ saveRDS(
 
 
 
-# Meteo dati
-
-# 8. Prepare meteorological data -----------------------------
-
+# Prepare meteorological data ---------------------------------
 
 
 meteo_analysis <- meteo_corrected %>%
@@ -169,45 +133,8 @@ meteo_analysis <- meteo_corrected %>%
     Date
   )
 
-meteo_analysis <- meteo_analysis %>%
-  mutate(
-    day_of_year = yday(Date)
-  )
 
-
-meteo_analysis <- meteo_analysis %>%
-  mutate(
-    date_num = as.numeric(Date)
-  )
-
-# Šobrīd neatstāju DDabove0, jo tas nav gala mainīgais. Degree-days vēlāk rēķināsu pati no Taverage.
-
-glimpse(meteo_analysis)
-
-head(meteo_analysis, 20)
-
-meteo_analysis %>%
-  semi_join(
-    moth_assessment %>%
-      distinct(Year_plus_Site),
-    by = "Year_plus_Site"
-  ) %>%
-  filter(is.na(Taverage)) %>%
-  select(
-    Year_plus_Site,
-    Date,
-    Taverage
-  ) %>%
-  print(n = Inf)
-
-# Ir NA, bet tie ir arpus kožu perioda, joj izturēja pārbaudi uz vei tie ir starp noverojumu sakuma datumu unn beigu datumu
-
-
-
-
-
-
-# Save meteodata
+# Save meteorological data -----------------------------------
 
 saveRDS(
   meteo_analysis,
@@ -215,46 +142,26 @@ saveRDS(
 )
 
 
+if (file.exists(
+  "data/processed/moth_assessment.rds"
+)) {
+  cat(
+    'Fails "data/processed/moth_assessment.rds" ir izveidots.\n'
+  )
+}
 
+if (file.exists(
+  "data/processed/moth_analysis.rds"
+)) {
+  cat(
+    'Fails "data/processed/moth_analysis.rds" ir izveidots.\n'
+  )
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+if (file.exists(
+  "data/processed/meteo_analysis.rds"
+)) {
+  cat(
+    'Fails "data/processed/meteo_analysis.rds" ir izveidots.\n'
+  )
+}
