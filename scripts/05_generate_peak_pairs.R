@@ -125,6 +125,12 @@ saveRDS(
   candidate_generation_pairs,
   "data/processed/candidate_generation_pairs.rds"
 )
-file.exists("data/processed/all_peak_pairs.rds")
-file.exists("data/processed/candidate_generation_pairs.rds")
 
+
+if (file.exists("data/processed/all_peak_pairs.rds")) {
+  cat('Fails "data/processed/all_peak_pairs.rds" ir izveidots.\n')
+}
+
+if (file.exists("data/processed/candidate_generation_pairs.rds")) {
+  cat('Fails "data/processed/candidate_generation_pairs.rds" ir izveidots.\n')
+}
