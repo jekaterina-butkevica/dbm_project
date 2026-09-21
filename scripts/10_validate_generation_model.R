@@ -25,6 +25,9 @@ generation_model <- readRDS(
   "data/processed/generation_model_train.rds"
 )
 
+meteo_analysis <- readRDS(
+  "data/processed/meteo_analysis.rds"
+)
 
 # Load functions ----------------------------------------------
 
@@ -103,7 +106,6 @@ test_consensus <- apply_pair_acceptance(
 
 # Prediction validation on accepted test pairs ---------------
 
-
 accepted_test_pairs <- pair_candidates_test %>%
   mutate(
     pair_id = paste(
@@ -129,10 +131,18 @@ accepted_test_pairs <- pair_candidates_test %>%
   filter(
     pair_id == modal_pair
   ) %>%
+  rowwise() %>%
   mutate(
-    mean_temperature =
-      degree_days /
-      n_temp_days,
+    mean_temperature = mean(
+      meteo_analysis %>%
+        filter(
+          Year_plus_Site == .env$Year_plus_Site,
+          Date > .env$peak_1_date,
+          Date <= .env$peak_2_date
+        ) %>%
+        pull(Taverage),
+      na.rm = TRUE
+    ),
     
     observed_days =
       generation_days,
@@ -161,7 +171,8 @@ accepted_test_pairs <- pair_candidates_test %>%
     relative_error =
       absolute_error_days /
       observed_days
-  )
+  ) %>%
+  ungroup()
 
 
 
