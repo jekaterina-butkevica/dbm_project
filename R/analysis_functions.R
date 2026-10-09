@@ -149,7 +149,61 @@ analyse_dbm_series <- function(
   )
   
   
+  # Prepare accepted generation pairs ---------------------------
   
+  accepted_pairs <- candidate_pairs %>%
+    mutate(
+      pair_id = paste(
+        peak_1,
+        peak_2,
+        sep = "-"
+      )
+    ) %>%
+    inner_join(
+      pair_consensus %>%
+        filter(
+          accepted_pair
+        ) %>%
+        select(
+          Year_plus_Site,
+          modal_pair,
+          modal_pair_fraction,
+          median_error,
+          median_pair_quality
+        ),
+      by = "Year_plus_Site"
+    ) %>%
+    filter(
+      pair_id == modal_pair
+    )
+  
+  
+  # Calculate mean temperature and predicted generation duration -
+  
+  accepted_pairs <- accepted_pairs %>%
+    rowwise() %>%
+    mutate(
+      
+      mean_temperature = mean(
+        meteo_data %>%
+          filter(
+            Year_plus_Site == .env$Year_plus_Site,
+            Date > .env$peak_1_date,
+            Date <= .env$peak_2_date
+          ) %>%
+          pull(Taverage),
+        na.rm = TRUE
+      ),
+      
+      predicted_development_rate =
+        parameters$generation_model_parameters$intercept +
+        parameters$generation_model_parameters$slope *
+        mean_temperature,
+      
+      predicted_generation_days =
+        1 / predicted_development_rate
+    ) %>%
+    ungroup()
   
   # Return results --------------------------------------------
   
@@ -167,7 +221,10 @@ analyse_dbm_series <- function(
       selected_all_tbase,
     
     pair_consensus =
-      pair_consensus
-  )
+      pair_consensus,
+  
+    accepted_pairs =
+      accepted_pairs
+    )
 }
 
