@@ -23,6 +23,25 @@ generate_peak_pairs <- function(data) {
       peak_2_time =
         data$mid_time[peak_2],
       
+      # Plateau information
+      peak_1_plateau_n =
+        data$plateau_n[peak_1],
+      
+      peak_2_plateau_n =
+        data$plateau_n[peak_2],
+      
+      peak_1_plateau_start_time =
+        data$plateau_start_time[peak_1],
+      
+      peak_1_plateau_end_time =
+        data$plateau_end_time[peak_1],
+      
+      peak_2_plateau_start_time =
+        data$plateau_start_time[peak_2],
+      
+      peak_2_plateau_end_time =
+        data$plateau_end_time[peak_2],
+      
       # Calendar dates used for daily meteorological data
       peak_1_date = as.Date(
         floor(peak_1_time),
