@@ -21,6 +21,7 @@ meteo_analysis <- readRDS(
   "data/processed/meteo_analysis.rds"
 )
 
+source("R/temperature_functions.R")
 
 # Combine accepted train and test intervals ---------------------------------
 
@@ -42,16 +43,13 @@ final_generation_pairs <- bind_rows(
 final_model_data <- final_generation_pairs %>%
   rowwise() %>%
   mutate(
-    mean_temperature = mean(
-      meteo_analysis %>%
-        filter(
-          Year_plus_Site == .env$Year_plus_Site,
-          Date > .env$peak_1_date,
-          Date <= .env$peak_2_date
-        ) %>%
-        pull(Taverage),
-      na.rm = TRUE
-    ),
+    mean_temperature =
+      calculate_interval_mean_temperature(
+        series_id = Year_plus_Site,
+        start_time = peak_1_time,
+        end_time = peak_2_time,
+        meteo_data = meteo_analysis
+      ),
     
     development_rate =
       1 / generation_days
