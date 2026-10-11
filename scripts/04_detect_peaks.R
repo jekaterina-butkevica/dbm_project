@@ -43,6 +43,9 @@ peak_summary <- candidate_peaks_only %>%
     mid_date,
     mid_time,
     activity,
+    plateau_n,
+    plateau_start_time,
+    plateau_end_time,
     relative_prominence,
     relative_to_max,
     observations_before,
@@ -54,7 +57,6 @@ peak_summary <- candidate_peaks_only %>%
     Year_plus_Site,
     mid_time
   )
-
 
 # Save --------------------------------------------------------
 
