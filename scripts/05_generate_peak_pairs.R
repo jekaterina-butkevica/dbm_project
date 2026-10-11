@@ -63,3 +63,11 @@ if (file.exists("data/processed/candidate_generation_pairs.rds")) {
     'Fails "data/processed/candidate_generation_pairs.rds" ir izveidots.\n'
   )
 }
+
+
+cat(
+  "Candidate generation pairs:",
+  nrow(candidate_generation_pairs), "\n",
+  "Series with candidate pairs:",
+  n_distinct(candidate_generation_pairs$Year_plus_Site), "\n"
+)

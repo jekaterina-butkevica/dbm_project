@@ -179,3 +179,5 @@ if (file.exists(
     'Fails "data/processed/final_peak_uncertainty_summary.rds" ir izveidots.\n'
   )
 }
+
+print(peak_uncertainty_summary)

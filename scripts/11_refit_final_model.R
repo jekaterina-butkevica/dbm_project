@@ -257,3 +257,5 @@ if (file.exists(
     'Fails "data/processed/final_generation_model_bootstrap.rds" ir izveidots.\n'
   )
 }
+
+print(final_model_parameters)

@@ -324,3 +324,10 @@ if (file.exists(
     'Fails "data/processed/accepted_generation_pairs_train.rds" ir izveidots.\n'
   )
 }
+
+
+cat(
+  "Accepted training series:",
+  n_distinct(accepted_generation_pairs_train$Year_plus_Site),
+  "\n"
+)

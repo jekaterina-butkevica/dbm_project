@@ -261,3 +261,4 @@ if (file.exists(
   )
 }
 
+print(final_validation_summary)

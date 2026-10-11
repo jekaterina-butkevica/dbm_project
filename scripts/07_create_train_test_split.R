@@ -89,3 +89,8 @@ if (file.exists("data/processed/train_test_split.rds")) {
     'Fails "data/processed/train_test_split.rds" ir izveidots.\n'
   )
 }
+
+
+series_split %>%
+  count(split) %>%
+  print()

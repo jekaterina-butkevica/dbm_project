@@ -117,3 +117,4 @@ if (file.exists(
     'Fails "data/processed/generation_model_data_train.rds" ir izveidots.\n'
   )
 }
+

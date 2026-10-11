@@ -71,3 +71,9 @@ if (file.exists("data/processed/candidate_peaks.rds")) {
     'Fails "data/processed/candidate_peaks.rds" ir izveidots.\n'
   )
 }
+
+cat(
+  "Candidate peaks:", nrow(peak_summary), "\n",
+  "Series with candidate peaks:",
+  n_distinct(peak_summary$Year_plus_Site), "\n"
+)
