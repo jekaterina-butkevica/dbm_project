@@ -66,6 +66,17 @@ if (any(dd_grid$n_missing_temp > 0)) {
   )
 }
 
+if (any(
+  abs(
+    dd_grid$temperature_coverage_days -
+    dd_grid$expected_interval_days
+  ) > 1e-8
+)) {
+  
+  stop(
+    "Degree-day calculation does not fully cover one or more peak intervals."
+  )
+}
 
 # Save --------------------------------------------------------
 
