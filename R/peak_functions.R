@@ -1,54 +1,114 @@
 # peak_functions.R
-# Functions for detecting candidate DBM flight peaks
+# Functions for detecting candidate flight-activity peaks
+
 
 detect_candidate_peaks <- function(data) {
   
-  result <- data %>%
+  data <- data %>%
     arrange(mid_time) %>%
     mutate(
-      
-      # Standardized observed activity
       activity = total_count / trap_days,
+      observation_index = row_number()
+    )
+  
+  
+  # Identify runs of exactly equal activity -------------------
+  
+  same_as_previous <-
+    data$activity ==
+    dplyr::lag(data$activity)
+  
+  same_as_previous[is.na(same_as_previous)] <- FALSE
+  
+  data$plateau_id <- cumsum(
+    !same_as_previous
+  )
+  
+  
+  # Summarise each single point or flat plateau ---------------
+  
+  peak_groups <- data %>%
+    group_by(plateau_id) %>%
+    summarise(
+      Year =
+        first(Year),
       
-      # Activity at neighbouring assessments
-      previous_activity = lag(activity),
-      next_activity = lead(activity),
+      Site =
+        first(Site),
       
-      # Change before and after each observation
-      rise = activity - previous_activity,
-      fall = next_activity - activity,
+      activity =
+        first(activity),
       
-      # Candidate local maximum
+      plateau_start_index =
+        min(observation_index),
+      
+      plateau_end_index =
+        max(observation_index),
+      
+      plateau_n =
+        n(),
+      
+      plateau_start_time =
+        min(mid_time),
+      
+      plateau_end_time =
+        max(mid_time),
+      
+      mid_time =
+        mean(mid_time),
+      
+      .groups = "drop"
+    )
+  
+  
+  # Activity immediately outside each group -------------------
+  
+  peak_groups <- peak_groups %>%
+    mutate(
+      previous_activity =
+        lag(activity),
+      
+      next_activity =
+        lead(activity),
+      
+      rise =
+        activity - previous_activity,
+      
+      drop =
+        activity - next_activity,
+      
       is_candidate_peak =
-        rise > 0 &
-        fall < 0,
+        !is.na(previous_activity) &
+        !is.na(next_activity) &
+        activity > previous_activity &
+        activity > next_activity,
       
-      # Size of decline after the candidate peak
-      drop = activity - next_activity,
+      local_prominence =
+        pmin(
+          rise,
+          drop
+        ),
       
-      # Conservative local prominence
-      local_prominence = pmin(
-        rise,
-        drop
-      ),
-      
-      # Prominence relative to peak height
       relative_prominence =
         local_prominence / activity,
       
-      # Series-level activity context
       series_max_activity =
         max(activity, na.rm = TRUE),
       
       relative_to_max =
         activity / series_max_activity,
       
-      # Position within the observed series
+      mid_date =
+        as.Date(
+          floor(mid_time),
+          origin = "1970-01-01"
+        ),
+      
       series_start_time =
-        min(mid_time, na.rm = TRUE),
+        min(data$mid_time, na.rm = TRUE),
       
       series_end_time =
-        max(mid_time, na.rm = TRUE),
+        max(data$mid_time, na.rm = TRUE),
       
       days_from_start =
         mid_time - series_start_time,
@@ -56,25 +116,18 @@ detect_candidate_peaks <- function(data) {
       days_to_end =
         series_end_time - mid_time,
       
-      # Distance to the nearest series boundary
       edge_distance =
         pmin(
           days_from_start,
           days_to_end
         ),
       
-      # Position in the sequence of observations
-      observation_index = row_number(),
-      
-      n_observations = n(),
-      
       observations_before =
-        observation_index - 1,
+        plateau_start_index - 1,
       
       observations_after =
-        n_observations - observation_index,
+        nrow(data) - plateau_end_index,
       
-      # Number of observations available on the weaker side
       observations_to_edge =
         pmin(
           observations_before,
@@ -82,5 +135,6 @@ detect_candidate_peaks <- function(data) {
         )
     )
   
-  return(result)
+  
+  peak_groups
 }
