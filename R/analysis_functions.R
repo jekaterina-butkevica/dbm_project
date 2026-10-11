@@ -42,6 +42,9 @@ analyse_dbm_series <- function(
       mid_date,
       mid_time,
       activity,
+      plateau_n,
+      plateau_start_time,
+      plateau_end_time,
       relative_prominence,
       relative_to_max,
       observations_before,
@@ -109,6 +112,17 @@ analyse_dbm_series <- function(
     )
   }
   
+  if (any(
+    abs(
+      dd_grid$temperature_coverage_days -
+      dd_grid$expected_interval_days
+    ) > 1e-8
+  )) {
+    
+    stop(
+      "Degree-day calculation does not fully cover one or more peak intervals."
+    )
+  }
   
   # Add pair-quality diagnostics -------------------------------
   
@@ -184,16 +198,13 @@ analyse_dbm_series <- function(
     rowwise() %>%
     mutate(
       
-      mean_temperature = mean(
-        meteo_data %>%
-          filter(
-            Year_plus_Site == .env$Year_plus_Site,
-            Date > .env$peak_1_date,
-            Date <= .env$peak_2_date
-          ) %>%
-          pull(Taverage),
-        na.rm = TRUE
-      ),
+      mean_temperature =
+        calculate_interval_mean_temperature(
+          series_id = Year_plus_Site,
+          start_time = peak_1_time,
+          end_time = peak_2_time,
+          meteo_data = meteo_data
+        ),
       
       predicted_development_rate =
         parameters$generation_model_parameters$intercept +
