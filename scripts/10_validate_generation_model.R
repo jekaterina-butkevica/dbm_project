@@ -133,16 +133,13 @@ accepted_test_pairs <- pair_candidates_test %>%
   ) %>%
   rowwise() %>%
   mutate(
-    mean_temperature = mean(
-      meteo_analysis %>%
-        filter(
-          Year_plus_Site == .env$Year_plus_Site,
-          Date > .env$peak_1_date,
-          Date <= .env$peak_2_date
-        ) %>%
-        pull(Taverage),
-      na.rm = TRUE
-    ),
+    mean_temperature =
+      calculate_interval_mean_temperature(
+        series_id = Year_plus_Site,
+        start_time = peak_1_time,
+        end_time = peak_2_time,
+        meteo_data = meteo_analysis
+      ),
     
     observed_days =
       generation_days,
@@ -263,3 +260,4 @@ if (file.exists(
     'Fails "data/processed/final_validation_summary.rds" ir izveidots.\n'
   )
 }
+
