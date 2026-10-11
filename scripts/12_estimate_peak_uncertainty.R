@@ -23,22 +23,40 @@ moth_analysis <- readRDS(
 
 get_peak_window <- function(
     series_id,
-    peak_time,
+    plateau_start_time,
+    plateau_end_time,
     moth_data
 ) {
   
-  peak_row <- moth_data %>%
+  peak_rows <- moth_data %>%
     filter(
       Year_plus_Site == series_id,
-      mid_time == peak_time
+      mid_time >= plateau_start_time,
+      mid_time <= plateau_end_time
     )
   
+  
+  if (nrow(peak_rows) == 0) {
+    stop(
+      "No observations found for a peak timing window."
+    )
+  }
+  
+  
   tibble(
-    lower_date = peak_row$previous_date,
-    upper_date = peak_row$Date
+    lower_date =
+      min(
+        peak_rows$previous_date,
+        na.rm = TRUE
+      ),
+    
+    upper_date =
+      max(
+        peak_rows$Date,
+        na.rm = TRUE
+      )
   )
 }
-
 
 # Peak timing windows ------------------------------------------------------
 
@@ -48,30 +66,33 @@ peak_uncertainty <- final_generation_pairs %>%
     
     peak_1_lower = get_peak_window(
       Year_plus_Site,
-      peak_1_time,
+      peak_1_plateau_start_time,
+      peak_1_plateau_end_time,
       moth_analysis
     )$lower_date,
     
     peak_1_upper = get_peak_window(
       Year_plus_Site,
-      peak_1_time,
+      peak_1_plateau_start_time,
+      peak_1_plateau_end_time,
       moth_analysis
     )$upper_date,
     
     peak_2_lower = get_peak_window(
       Year_plus_Site,
-      peak_2_time,
+      peak_2_plateau_start_time,
+      peak_2_plateau_end_time,
       moth_analysis
     )$lower_date,
     
     peak_2_upper = get_peak_window(
       Year_plus_Site,
-      peak_2_time,
+      peak_2_plateau_start_time,
+      peak_2_plateau_end_time,
       moth_analysis
     )$upper_date
   ) %>%
   ungroup()
-
 
 # Generation-duration uncertainty ------------------------------------------
 
