@@ -64,6 +64,14 @@ train_pairs <- pair_candidates_train %>%
     peak_2,
     peak_1_time,
     peak_2_time,
+    
+    peak_1_plateau_n,
+    peak_2_plateau_n,
+    peak_1_plateau_start_time,
+    peak_1_plateau_end_time,
+    peak_2_plateau_start_time,
+    peak_2_plateau_end_time,
+    
     peak_1_date,
     peak_2_date,
     generation_days,
