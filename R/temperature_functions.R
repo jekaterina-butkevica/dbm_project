@@ -141,3 +141,4 @@ calculate_interval_mean_temperature <- function(
     temp_data$day_weight
   )
 }
+
