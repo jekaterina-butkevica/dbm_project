@@ -143,7 +143,7 @@ Aprakstā tika noradīts, ka Jelgava tika izvietotas tikai 3 lamatas. Apskatam v
 
 ```{r vai_Jelgava_vienmer_3}
 trap_check %>% 
-  filter(Site == "Jelgava_city") %>% 
+  filter(Site == "Jelgava_town") %>% 
   count(n_traps)
 ```
 Jā, Jelagvā vienmēr ir 3 lamatas. Pārbaudam, vai ir serijas ārpus Jelgavas, kuros bija tikai tris lamatas:
@@ -152,7 +152,7 @@ Jā, Jelagvā vienmēr ir 3 lamatas. Pārbaudam, vai ir serijas ārpus Jelgavas,
 trap_check %>% 
   filter(n_traps != 5) %>% 
   arrange(Year, Site, Date) %>% 
-  filter(Site != "Jelgava_city") %>% 
+  filter(Site != "Jelgava_town") %>% 
   count(n_traps)
 ```
 
@@ -163,7 +163,7 @@ trap_check %>%
   filter(n_traps != 5)  %>% 
   count(Site, n_traps)  %>% 
   arrange(Site, n_traps) %>% 
-  filter(Site != "Jelgava_city")
+  filter(Site != "Jelgava_town")
 
 unusual_trap_dates <- trap_check |>
   filter(!n_traps %in% c(3, 5)) |>
@@ -174,17 +174,17 @@ unusual_trap_dates
 
 Apskāts: 
 
-- 2022Dricanu 25.08.2022 dati no 4 lamatam, bet nakamājā reizē - 09.01.2022 dati no 6 lamatam, vai var būt ievādes kļūda ???
+- 2022Dricāni 25.08.2022 dati no 4 lamatam, bet nakamājā reizē - 09.01.2022 dati no 6 lamatam, vai var būt ievādes kļūda ???
 
-- 2023Dignajas 31.05.2023 ir dati no 10 lamatam, pēc tam tikai no 5. Ir vērtības 0 un 1, katra pārā skaita reižu - var būt datu dublēšana ???
+- 2023Dignāja 31.05.2023 ir dati no 10 lamatam, pēc tam tikai no 5. Ir vērtības 0 un 1, katra pārā skaita reižu - var būt datu dublēšana ???
 
-- 2023Elejas - 21.08.2023 dati no 6 lamatam, pirms tam un pēc tam ir pa 5 - ???
+- 2023Eleja - 21.08.2023 dati no 6 lamatam, pirms tam un pēc tam ir pa 5 - ???
 
-- 2023Pures - sezonā beigas 5 reizes pēc kārtas apsēkotas tikai 4 lamatas, acimredzami vienkārši kāda iemesla dēļ samazinātais efforts. Nav kļūda.
+- 2023Pūre - sezonā beigas 5 reizes pēc kārtas apsēkotas tikai 4 lamatas, acimredzami vienkārši kāda iemesla dēļ samazinātais efforts. Nav kļūda.
 
 - 2023Tirzas - dati no divām lamatām no 08.06.2023, pirms tam un pēc tam dati ir no visām 5 lamatam - ???
 
-- 2025Varmes - vienreiz 4 lamatas, bet papildus viena lamata tājā pati datuma datēta ar 2022 gadu - datu ievādes kļūda.
+- 2025Vārme - vienreiz 4 lamatas, bet papildus viena lamata tājā pati datuma datēta ar 2022 gadu - datu ievādes kļūda.
 
 
 
@@ -195,12 +195,12 @@ Apskāts:
 # Manuālas palaišanas gadījumā, šo boku nedrikst palais vairākas reizes!
 
 
-2022Dricanu: viens no 09.01.2022 ierakstiem pārcelts uz 25.08.2022 ("visticamāk ievades kļūda, kopējot datumus pārceļam pirmo vērtību no 9.01.2022 uz 25.08.2022")
+2022Dricāni: viens no 09.01.2022 ierakstiem pārcelts uz 25.08.2022 ("visticamāk ievades kļūda, kopējot datumus pārceļam pirmo vērtību no 9.01.2022 uz 25.08.2022")
 
 ```{r}
 moth_corrected %>%
   filter(
-    Year_plus_Site == "2022Dricanu",
+    Year_plus_Site == "2022Dricāni",
     Date == as.Date("2022-09-01")
   )
 
@@ -212,7 +212,7 @@ moth_corrected <- moth_corrected %>%
   ungroup() %>%
   mutate(
     Date = case_when(
-      Year_plus_Site == "2022Dricanu" &
+      Year_plus_Site == "2022Dricāni" &
         Date == as.Date("2022-09-01") &
         row_in_date == 1 ~ as.Date("2022-08-25"),
 
@@ -222,12 +222,12 @@ moth_corrected <- moth_corrected %>%
   select(-row_in_date)
 ```
 
-2023Dignajas 31.05.2023 ir ievadīts divas reizes pēc kārtas, atstāju tikai pusi no vertībām. ("jā 31.05.2023 ir ievadīts divas reizes pēc kārtas, reāli ir 1, 0, 1, 0, 0.")
+2023Dignāja 31.05.2023 ir ievadīts divas reizes pēc kārtas, atstāju tikai pusi no vertībām. ("jā 31.05.2023 ir ievadīts divas reizes pēc kārtas, reāli ir 1, 0, 1, 0, 0.")
 
 ```{r}
 moth_corrected %>%
   filter(
-    Year_plus_Site == "2023Dignajas",
+    Year_plus_Site == "2023Dignāja",
     Date == as.Date("2023-05-31")
   )
 
@@ -239,7 +239,7 @@ moth_corrected <- moth_corrected %>%
   ungroup() %>%
   filter(
     !(
-      Year_plus_Site == "2023Dignajas" &
+      Year_plus_Site == "2023Dignāja" &
       Date == as.Date("2023-05-31") &
       row_in_date > 5
     )
@@ -248,20 +248,20 @@ moth_corrected <- moth_corrected %>%
 ```
 
 
-2023Elejas - 21.08.2023 paradās papildus lamata - nolēmts izņemt ierakstu ar 150 ("hmm, reāli nesaprotu, mazāk lamatu var būt ja kādu vējš aizpūš vai agrotehnika salauž, bet vairāk nevar būt... Bet izskatās ka tas ieraksts kur ir 150 tur neiederas, bet es reāli nevaru iedomāties, kā tas tur ir nokļuvis. Jebkurā gadījumā metam 150 ārā")
+2023Eleja - 21.08.2023 paradās papildus lamata - nolēmts izņemt ierakstu ar 150 ("hmm, reāli nesaprotu, mazāk lamatu var būt ja kādu vējš aizpūš vai agrotehnika salauž, bet vairāk nevar būt... Bet izskatās ka tas ieraksts kur ir 150 tur neiederas, bet es reāli nevaru iedomāties, kā tas tur ir nokļuvis. Jebkurā gadījumā metam 150 ārā")
 
 
 ```{r}
 moth_corrected %>%
   filter(
-    Year_plus_Site == "2023Elejas",
+    Year_plus_Site == "2023Eleja",
     Date == as.Date("2023-08-21")
   )
 
 moth_corrected <- moth_corrected %>%
   filter(
     !(
-      Year_plus_Site == "2023Elejas" &
+      Year_plus_Site == "2023Eleja" &
       Date == as.Date("2023-08-21") &
       Diamondback_count == 150
     )
@@ -271,7 +271,7 @@ moth_corrected <- moth_corrected %>%
 
 
 
-- 2023Pures - sezonā beigas 5 reizes pēc kārtas apsēkotas tikai 4 lamatas, acimredzami vienkārši kāda iemesla dēļ samazinātais efforts. Nav kļūda.
+- 2023Pūre - sezonā beigas 5 reizes pēc kārtas apsēkotas tikai 4 lamatas, acimredzami vienkārši kāda iemesla dēļ samazinātais efforts. Nav kļūda.
 
 
 
@@ -279,19 +279,19 @@ moth_corrected <- moth_corrected %>%
 - 2023Tirzas - dati no divām lamatām no 08.06.2023, pirms tam un pēc tam dati ir no visām 5 lamatam - ("visticamāk bojātas/ pazudušas lamatas") - labojumus neveikšu
 
 
-- 2025Varmes - vienreiz 4 lamatas 07.09.2025, bet papildus viena lamata tājā pati datuma datēta ar 2022 gadu - ("un 2022 tiešām ir datu ievades kļūda") - man tomēr liekas, ka tas ir pareizais ieraksts ar nepareizo gadu:
+- 2025Vārme - vienreiz 4 lamatas 07.09.2025, bet papildus viena lamata tājā pati datuma datēta ar 2022 gadu - ("un 2022 tiešām ir datu ievades kļūda") - man tomēr liekas, ka tas ir pareizais ieraksts ar nepareizo gadu:
 
 ```{r}
 moth_corrected %>%
   filter(
-    Year_plus_Site == "2025Varmes",
+    Year_plus_Site == "2025Vārme",
     Date %in% as.Date(c("2022-07-16", "2025-07-16"))
   )
 
 moth_corrected <- moth_corrected %>%
   mutate(
     Date = case_when(
-      Year_plus_Site == "2025Varmes" &
+      Year_plus_Site == "2025Vārme" &
         Date == as.Date("2022-09-07") ~ as.Date("2025-09-07"),
 
       TRUE ~ Date
@@ -366,32 +366,32 @@ date_check %>%
  
  Apskāts: 
  
- - 2021Ligatnes - ir viena sērija, kas datēta ar 2024 gadu. Datumu saskaņotību ar 2024. gadu neatradu. Iespējams tas ir 2021. gads, ievadīts ar kļūdu? Datumi to pieļauj.
- - 2022Elejas - lidzīgi kā iepriekšēja punktā - viena serija no 2024. gada.
- - 2024Dignajas - gārš intervāls. Vai nav izskrītusi viena serija?
- - 2024Varmes - gārš intervāls. Vai nav izskrītusi viena serija?
- - 2025Elejas - ir dati no 2027. gada, esmu pārliecināta, ka tas ir ievādes kļūda no 2025. gada.
- - 2025Pures - gārš intervāls. Vai nav izskrītusi viena serija?
- - 2025Varmes - 2022-07-16 - izskātas, ka ievades kļūda no 2025. gada; gārš intervāls starp 2025-06-18 un 2025-06-18. Vai nav izskrītusi viena serija?; Novērojumiem no 11.06.2025 izskatās, ka menesis un datums samainīti vietām - novēmbris nevar būt; dati no 2026. gada, visticamāk arī ir 2025.
+ - 2021Līgatne - ir viena sērija, kas datēta ar 2024 gadu. Datumu saskaņotību ar 2024. gadu neatradu. Iespējams tas ir 2021. gads, ievadīts ar kļūdu? Datumi to pieļauj.
+ - 2022Eleja - lidzīgi kā iepriekšēja punktā - viena serija no 2024. gada.
+ - 2024Dignāja - gārš intervāls. Vai nav izskrītusi viena serija?
+ - 2024Vārme - gārš intervāls. Vai nav izskrītusi viena serija?
+ - 2025Eleja - ir dati no 2027. gada, esmu pārliecināta, ka tas ir ievādes kļūda no 2025. gada.
+ - 2025Pūre - gārš intervāls. Vai nav izskrītusi viena serija?
+ - 2025Vārme - 2022-07-16 - izskātas, ka ievades kļūda no 2025. gada; gārš intervāls starp 2025-06-18 un 2025-06-18. Vai nav izskrītusi viena serija?; Novērojumiem no 11.06.2025 izskatās, ka menesis un datums samainīti vietām - novēmbris nevar būt; dati no 2026. gada, visticamāk arī ir 2025.
  
  
  
 **Pēc Edītes atbildes saņemšānas ievesu šadus labojumus: **
 
  
- 2021Ligatnes - ("tas ir tā  ka tu saki, 2021. ievadīts ka 2024") - nomainu gadu
+ 2021Līgatne - ("tas ir tā  ka tu saki, 2021. ievadīts ka 2024") - nomainu gadu
  
 ```{r}
 moth_corrected %>%
   filter(
-    Year_plus_Site == "2021Ligatnes",
+    Year_plus_Site == "2021Līgatne",
     Date %in% as.Date(c("2024-09-02", "2021-09-02"))
   )
 
  moth_corrected <- moth_corrected %>%
   mutate(
     Date = case_when(
-      Year_plus_Site == "2021Ligatnes" &
+      Year_plus_Site == "2021Līgatne" &
         Date == as.Date("2024-09-02") ~ as.Date("2021-09-02"),
 
       TRUE ~ Date
@@ -400,20 +400,20 @@ moth_corrected %>%
  
 ```
  
- 2022Elejas - tas pats, noaminu gada vērtību
+ 2022Eleja - tas pats, noaminu gada vērtību
  
  
 ```{r}
 moth_corrected %>%
   filter(
-    Year_plus_Site == "2022Elejas",
+    Year_plus_Site == "2022Eleja",
     Date %in% as.Date(c("2024-05-11", "2022-05-11"))
   )
 
  moth_corrected <- moth_corrected %>%
   mutate(
     Date = case_when(
-      Year_plus_Site == "2022Elejas" &
+      Year_plus_Site == "2022Eleja" &
         Date == as.Date("2024-05-11") ~ as.Date("2022-05-11"),
 
       TRUE ~ Date
@@ -424,20 +424,20 @@ moth_corrected %>%
 
  
  
- - 2024Dignajas - gārš intervāls. Vai nav izskrītusi viena serija? - uzskaite nenotika, labojumu nav
+ - 2024Dignāja - gārš intervāls. Vai nav izskrītusi viena serija? - uzskaite nenotika, labojumu nav
  
  
  
- - 2024Varmes - gārš intervāls. Vai nav izskrītusi viena serija? - uzskaite nenotika, labojumu nav
+ - 2024Vārme - gārš intervāls. Vai nav izskrītusi viena serija? - uzskaite nenotika, labojumu nav
  
  
- - 2025Elejas - ir dati no 2027. gada, esmu pārliecināta, ka tas ir ievādes kļūda no 2025. gada - ("jā, tas būs 2025. gads") - laboju gadu
+ - 2025Eleja - ir dati no 2027. gada, esmu pārliecināta, ka tas ir ievādes kļūda no 2025. gada - ("jā, tas būs 2025. gads") - laboju gadu
  
   
 ```{r}
 moth_corrected %>%
   filter(
-    Year_plus_Site == "2025Elejas",
+    Year_plus_Site == "2025Eleja",
     Date %in% as.Date(c("2027-07-02", "2025-07-02"))
     )
 
@@ -445,7 +445,7 @@ moth_corrected %>%
  moth_corrected <- moth_corrected %>%
   mutate(
     Date = case_when(
-      Year_plus_Site == "2025Elejas" &
+      Year_plus_Site == "2025Eleja" &
         Date == as.Date("2027-07-02") ~ as.Date("2025-07-02"),
 
       TRUE ~ Date
@@ -458,17 +458,17 @@ moth_corrected %>%
 
 
 
- - 2025Pures - gārš intervāls. Vai nav izskrītusi viena serija? - labojummi nav nepieciešami
+ - 2025Pūre - gārš intervāls. Vai nav izskrītusi viena serija? - labojummi nav nepieciešami
  
  
  
- - 2025Varmes - 2022-07-16 - izskātas, ka ievades kļūda no 2025. gada;
+ - 2025Vārme - 2022-07-16 - izskātas, ka ievades kļūda no 2025. gada;
  
    
 ```{r}
 moth_corrected %>%
   filter(
-    Year_plus_Site == "2025Varmes",
+    Year_plus_Site == "2025Vārme",
     Date %in% as.Date(c("2022-07-16", "2025-07-16"))
     )
 
@@ -476,7 +476,7 @@ moth_corrected %>%
  moth_corrected <- moth_corrected %>%
   mutate(
     Date = case_when(
-      Year_plus_Site == "2025Varmes" &
+      Year_plus_Site == "2025Vārme" &
         Date == as.Date("2022-07-16") ~ as.Date("2025-07-16"),
 
       TRUE ~ Date
@@ -488,13 +488,13 @@ moth_corrected %>%
  
 
  
-2025Varmes laboju 07.16.2022 uz 07.16.2025
+2025Vārme laboju 07.16.2022 uz 07.16.2025
  
  
 ```{r}
 moth_corrected %>%
   filter(
-    Year_plus_Site == "2025Varmes",
+    Year_plus_Site == "2025Vārme",
     Date %in% as.Date(c("2027-07-16", "2025-07-16"))
     )
 
@@ -502,7 +502,7 @@ moth_corrected %>%
  moth_corrected <- moth_corrected %>%
   mutate(
     Date = case_when(
-      Year_plus_Site == "2025Varmes" &
+      Year_plus_Site == "2025Vārme" &
         Date == as.Date("2027-07-02") ~ as.Date("2025-07-02"),
 
       TRUE ~ Date
@@ -518,7 +518,7 @@ Gārš intervāls starp 2025-05-28 un 2025-06-18. Vai nav izskrītusi viena seri
 ```{r}
 moth_corrected %>%
   filter(
-    Year_plus_Site == "2025Varmes",
+    Year_plus_Site == "2025Vārme",
     Date %in% as.Date(c("2025-11-06", "2025-06-11"))
     )
 
@@ -526,7 +526,7 @@ moth_corrected %>%
  moth_corrected <- moth_corrected %>%
   mutate(
     Date = case_when(
-      Year_plus_Site == "2025Varmes" &
+      Year_plus_Site == "2025Vārme" &
         Date == as.Date("2025-11-06") ~ as.Date("2025-06-11"),
 
       TRUE ~ Date
@@ -543,7 +543,7 @@ dati no 2026. gada, visticamāk arī ir 2025. - Jāizlaboi gadu un datumu
 ```{r}
 moth_corrected %>%
   filter(
-    Year_plus_Site == "2025Varmes",
+    Year_plus_Site == "2025Vārme",
     Date %in% as.Date(c("2026-06-04", "2025-06-04"))
     )
 
@@ -551,7 +551,7 @@ moth_corrected %>%
  moth_corrected <- moth_corrected %>%
   mutate(
     Date = case_when(
-      Year_plus_Site == "2025Varmes" &
+      Year_plus_Site == "2025Vārme" &
         Date == as.Date("2026-06-04") ~ as.Date("2025-06-04"),
 
       TRUE ~ Date
@@ -730,7 +730,7 @@ Apskatos kādi dati ir tajā periodā:
 ```{r}
 meteo_qc %>%
   filter(
-    Year_plus_Site == "2021Dignajas",
+    Year_plus_Site == "2021Dignāja",
     Date >= as.Date("2021-09-24"),
     Date <= as.Date("2021-09-30")
   ) %>%
@@ -757,10 +757,10 @@ meteo_corrected <- meteo_qc %>%
   # Remove completely empty row
   filter(!is.na(Date)) %>%
   
-  # Fill missing temperature for 2021 Dignajas
+  # Fill missing temperature for 2021 Dignāja
   mutate(
     Taverage = case_when(
-      Year_plus_Site == "2021Dignajas" &
+      Year_plus_Site == "2021Dignāja" &
         Date == as.Date("2021-09-27") ~ 9.035,
       
       TRUE ~ Taverage
@@ -860,6 +860,104 @@ meteo_corrected %>%
 
 
 
+
+
+
+
+##### Papildus korekcijas
+
+```{r}
+assessment_intervals <- moth_corrected %>%
+  distinct(
+    Year_plus_Site,
+    Year,
+    Site,
+    Date
+  ) %>%
+  arrange(
+    Year_plus_Site,
+    Date
+  ) %>%
+  group_by(
+    Year_plus_Site
+  ) %>%
+  mutate(
+    previous_date = lag(Date),
+    interval_days = as.numeric(Date - previous_date)
+  ) %>%
+  ungroup() %>%
+  filter(!is.na(interval_days))
+
+assessment_intervals %>%
+  count(interval_days) %>%
+  arrange(interval_days)
+```
+
+
+Kārtēja datu labošana: 
+
+```{r}
+assessment_intervals <- moth_corrected %>%
+  distinct(
+    Year_plus_Site,
+    Date
+  ) %>%
+  arrange(
+    Year_plus_Site,
+    Date
+  ) %>%
+  group_by(
+    Year_plus_Site
+  ) %>%
+  mutate(
+    previous_date = lag(Date),
+    interval_days = as.numeric(Date - previous_date)
+  ) %>%
+  ungroup() %>%
+  filter(!is.na(interval_days))
+
+
+unusual_intervals <- assessment_intervals %>%
+  filter(
+    interval_days <= 3 |
+      interval_days >= 9
+  ) %>%
+  select(
+    Year_plus_Site,
+    previous_date,
+    Date,
+    interval_days
+  ) %>%
+  arrange(
+    interval_days,
+    Year_plus_Site,
+    Date
+  )
+
+unusual_intervals
+
+
+```
+
+
+Izņemu 2024Eleja, jo 1 dienas starpība ar 0 uzskaitīto indivīdu, acimredzot ir kļuda
+
+```{r}
+# 2024 Eleja: 2024-06-19 contains only zero counts and is treated as
+# an erroneous assessment record. Remove the entire assessment date.
+
+moth_corrected <- moth_corrected %>%
+  filter(
+    !(
+      Year_plus_Site == "2024Eleja" &
+        Date == as.Date("2024-06-19")
+    )
+  )
+
+```
+
+
+
 # Rezultātu faili 8. Save corrected datasets
 
 
@@ -877,7 +975,3 @@ saveRDS(
 
 
 ```
-
-
-
-
